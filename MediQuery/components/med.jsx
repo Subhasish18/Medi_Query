@@ -13,14 +13,12 @@ import {
   Easing,
   KeyboardAvoidingView,
   Platform,
-  Dimensions,
   ScrollView,
 } from "react-native";
 import { SvgXml } from "react-native-svg";
 import config from "../config";
 
 const API_BASE = config.API_BASE;
-const SCREEN_HEIGHT = Dimensions.get("window").height;
 
 // online refresh icon SVG
 const refreshSvg = (color = "#000") => `
@@ -82,7 +80,7 @@ export default function Med() {
 
   const spin = spinAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ["0deg", "360deg"],
+    outputRange: ["360deg", "0deg"],
   });
 
   const handleSearch = async () => {
@@ -160,7 +158,7 @@ export default function Med() {
   };
 
   const renderHeader = () => (
-    <View style={{ paddingBottom: 20, minHeight: SCREEN_HEIGHT * (5 / 9) }}>
+    <View style={{ paddingBottom: 20, minHeight: 400}}>
       <View
         style={{
           flexDirection: "row",
