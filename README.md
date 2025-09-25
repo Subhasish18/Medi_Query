@@ -56,7 +56,7 @@
 
 <h2>🛠️ Tech Stack</h2>
 <ul>
-  <li><strong>Frontend:</strong> React Native (Expo / CLI)</li>
+  <li><strong>Frontend:</strong> React Native (Expo)</li>
   <li><strong>Backend (Optional):</strong> Node.js / Express.js + MongoDB</li>
   <li><strong>Dataset:</strong> A–Z medicines dataset of India</li>
   <li><strong>Notifications:</strong> Expo inbuilt notifications & Firebase Cloud Messaging</li>
