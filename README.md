@@ -1,16 +1,5 @@
 Medi_Query 🩺🔍
 
-
-
-
-
-
-
-
-
-
-
-
 MediQuery is a smart medical enquiry app built with React Native, available for Android and iOS.
 It helps users explore medicines in detail, compare alternatives, find nearby medical stores, and manage their medicine schedules with timely reminders.
 
@@ -59,7 +48,7 @@ Frontend: React Native (Expo / CLI)
 
 Backend (Optional): Node.js / Express.js + MongoDB
 
-Dataset: Extensive_A_Z_medicines_dataset_of_India 
+Dataset: Extensive A–Z medicines dataset of India
 
 Notifications: Expo inbuilt notifications & Firebase Cloud Messaging
 
@@ -110,7 +99,6 @@ Start Metro Bundler
 
 npx react-native start
 
-
 🤝 Contributing
 
 Contributions, issues, and feature requests are welcome!
@@ -120,5 +108,3 @@ Feel free to open an issue
 📄 License
 
 This project is licensed under the MIT License.
-
-✨ Do you also want me to include demo placeholders (like ![Home Screen]
