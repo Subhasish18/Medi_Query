@@ -1,5 +1,5 @@
 // src/screens/Maps.jsx
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,41 +8,23 @@ import {
   useColorScheme,
   Alert,
   Platform,
+  TouchableOpacity,
+  Linking,
 } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import * as Location from "expo-location";
-import { SafeAreaView } from "react-native-safe-area-context"; // ✅ better SafeArea
-import { StatusBar } from "expo-status-bar"; // ✅ handles both platforms well
+import { SafeAreaView } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
+import { useFocusEffect } from "@react-navigation/native"; 
+import { IconSymbol } from "@/components/ui/icon-symbol"; // ✅ import custom icon
 
 const DARK_MAP_STYLE = [
   { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
   { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
   { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
-  {
-    featureType: "administrative.locality",
-    elementType: "labels.text.fill",
-    stylers: [{ color: "#d59563" }],
-  },
-  {
-    featureType: "poi",
-    elementType: "labels.text.fill",
-    stylers: [{ color: "#d59563" }],
-  },
-  {
-    featureType: "poi.park",
-    elementType: "geometry",
-    stylers: [{ color: "#263c3f" }],
-  },
-  {
-    featureType: "road",
-    elementType: "geometry",
-    stylers: [{ color: "#38414e" }],
-  },
-  {
-    featureType: "water",
-    elementType: "geometry",
-    stylers: [{ color: "#17263c" }],
-  },
+  { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] },
 ];
 
 export default function Maps() {
@@ -52,10 +34,10 @@ export default function Maps() {
   const [region, setRegion] = useState(null);
   const [places, setPlaces] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedPlace, setSelectedPlace] = useState(null);
 
   const radius = 5000; // 5 km
 
-  // Build Overpass query for pharmacies/medicine shops
   const buildOverpassQuery = (lat, lon, r) => {
     const clauses = [
       'node["amenity"="pharmacy"]',
@@ -64,7 +46,14 @@ export default function Maps() {
       'way["shop"="chemist"]',
       'node["shop"="pharmacy"]',
       'way["shop"="pharmacy"]',
+      'node["shop"="drugstore"]',
+      'way["shop"="drugstore"]',
+      'node["shop"="medical"]',
+      'way["shop"="medical"]',
       'node["healthcare"="pharmacy"]',
+      'way["healthcare"="pharmacy"]',
+      'node["dispensing"="yes"]',
+      'way["dispensing"="yes"]',
     ];
 
     const data = `[out:json][timeout:25];
@@ -75,13 +64,11 @@ out center;`;
     return encodeURIComponent(data);
   };
 
-  // Fetch places
   const fetchPlaces = useCallback(async (lat, lon, r) => {
     setLoading(true);
     try {
       const queryStr = buildOverpassQuery(lat, lon, r);
       const url = `https://overpass-api.de/api/interpreter?data=${queryStr}`;
-
       const res = await fetch(url);
       if (!res.ok) throw new Error(`Overpass API error: ${res.status}`);
       const json = await res.json();
@@ -111,44 +98,60 @@ out center;`;
     }
   }, []);
 
-  // Get location
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert(
-          "Permission required",
-          "Location permission is required to find nearby medical shops."
-        );
-        setLoading(false);
-        return;
-      }
-      try {
-        const loc = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.High,
-        });
-        const { latitude, longitude } = loc.coords;
-        setRegion({
-          latitude,
-          longitude,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05,
-        });
-        await fetchPlaces(latitude, longitude, radius);
-      } catch (err) {
-        console.error("Location error:", err);
-        Alert.alert("Error", "Could not get location. Please try again.");
-        setLoading(false);
-      }
-    })();
+  const getLocationAndFetch = useCallback(async () => {
+    setLoading(true);
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(
+        "Permission required",
+        "Location permission is required to find nearby medical shops."
+      );
+      setLoading(false);
+      return;
+    }
+    try {
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      const { latitude, longitude } = loc.coords;
+      setRegion({
+        latitude,
+        longitude,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      });
+      await fetchPlaces(latitude, longitude, radius);
+    } catch (err) {
+      console.error("Location error:", err);
+      Alert.alert("Error", "Could not get location. Please try again.");
+      setLoading(false);
+    }
   }, [fetchPlaces]);
+
+  useFocusEffect(
+    useCallback(() => {
+      getLocationAndFetch();
+    }, [getLocationAndFetch])
+  );
+
+  const openInMaps = () => {
+    if (!selectedPlace) return;
+    const { lat, lon, tags } = selectedPlace;
+    const label = tags?.name || "Pharmacy";
+    const scheme =
+      Platform.OS === "ios"
+        ? `http://maps.apple.com/?daddr=${lat},${lon}&dirflg=d`
+        : `geo:0,0?q=${lat},${lon}(${label})`;
+    Linking.openURL(scheme).catch(() =>
+      Alert.alert("Error", "Could not open maps app.")
+    );
+  };
 
   if (!region) {
     return (
       <SafeAreaView
         style={[styles.center, isDark ? styles.darkBg : styles.lightBg]}
-        edges={["top", "left", "right"]} // ✅ respects notches/dynamic island
+        edges={["top", "left", "right"]}
       >
         <StatusBar style={isDark ? "light" : "dark"} />
         <ActivityIndicator size="large" color={isDark ? "#fff" : "#007AFF"} />
@@ -162,7 +165,7 @@ out center;`;
   return (
     <SafeAreaView
       style={[styles.container, isDark ? styles.darkBg : styles.lightBg]}
-      edges={["top", "left", "right", "bottom"]} // ✅ cover all safe zones
+      edges={["top", "left", "right", "bottom"]}
     >
       <StatusBar style={isDark ? "light" : "dark"} />
       <View style={styles.innerContainer}>
@@ -184,8 +187,11 @@ out center;`;
                 p.tags["operator"] ||
                 "Pharmacy / Chemist nearby"
               }
-              pinColor={"#FF0000"} // Always red
-            />
+              onPress={() => setSelectedPlace(p)}
+            >
+              {/* ✅ Custom icon instead of pin */}
+              <IconSymbol name="cross.case.fill" size={28} color="#e11d48" />
+            </Marker>
           ))}
         </MapView>
 
@@ -196,6 +202,12 @@ out center;`;
               Loading nearby medicine shops...
             </Text>
           </View>
+        )}
+
+        {selectedPlace && Platform.OS === "ios" && (
+          <TouchableOpacity style={styles.fab} onPress={openInMaps}>
+            <Text style={styles.fabText}>Directions ➡️</Text>
+          </TouchableOpacity>
         )}
       </View>
     </SafeAreaView>
@@ -220,6 +232,18 @@ const styles = StyleSheet.create({
     zIndex: 20,
     backgroundColor: "rgba(0,0,0,0.25)",
   },
+
+  fab: {
+    position: "absolute",
+    bottom: 20,
+    right: 20,
+    backgroundColor: "#2563EB",
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    borderRadius: 30,
+    elevation: 4,
+  },
+  fabText: { color: "#fff", fontWeight: "bold" },
 
   darkBg: { backgroundColor: "#0b1220" },
   lightBg: { backgroundColor: "#ffffff" },

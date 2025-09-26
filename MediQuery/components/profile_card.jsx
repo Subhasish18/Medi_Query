@@ -9,15 +9,9 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 
-export default function ProfileCard() {
+export default function ProfileCard({name, age, height, weight, gender}) {
   const colorScheme = useColorScheme(); // light or dark
   const isDark = colorScheme === "dark";
-
-  const name = "abc";
-  const age = 25;
-  const height = 165.2; // cm
-  const weight = 68.5; // kg
-  const gender = "male";
 
   const [visible, setVisible] = useState(true);
 
@@ -26,7 +20,7 @@ export default function ProfileCard() {
 
   // BMR calculation
   const calculateBMR = () => {
-    if (gender === "male") {
+    if (gender === "male" || gender === "prefer not to say") {
       return 10 * weight + 6.25 * height - 5 * age + 5;
     } else {
       return 10 * weight + 6.25 * height - 5 * age - 161;
