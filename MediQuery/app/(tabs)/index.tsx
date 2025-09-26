@@ -58,5 +58,6 @@ const styles = StyleSheet.create({
   medContainer: {
     marginTop: 20,
     flex: 1,
+    backgroundColor: 'transparent',
   },
 });
