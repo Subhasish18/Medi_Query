@@ -16,7 +16,7 @@ import * as Location from "expo-location";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { useFocusEffect } from "@react-navigation/native"; 
-import { IconSymbol } from "@/components/ui/icon-symbol"; // ✅ import custom icon
+import { IconSymbol } from "@/components/ui/icon-symbol";
 
 const DARK_MAP_STYLE = [
   { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
@@ -75,16 +75,8 @@ out center;`;
 
       const elements = (json.elements || [])
         .map((el) => {
-          if (el.type === "node") {
-            return { id: el.id, lat: el.lat, lon: el.lon, tags: el.tags || {} };
-          } else if (el.type === "way" && el.center) {
-            return {
-              id: el.id,
-              lat: el.center.lat,
-              lon: el.center.lon,
-              tags: el.tags || {},
-            };
-          }
+          if (el.type === "node") return { id: el.id, lat: el.lat, lon: el.lon, tags: el.tags || {} };
+          if (el.type === "way" && el.center) return { id: el.id, lat: el.center.lat, lon: el.center.lon, tags: el.tags || {} };
           return null;
         })
         .filter(Boolean);
@@ -100,26 +92,50 @@ out center;`;
 
   const getLocationAndFetch = useCallback(async () => {
     setLoading(true);
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert(
-        "Permission required",
-        "Location permission is required to find nearby medical shops."
-      );
-      setLoading(false);
-      return;
+
+    if (Platform.OS === "ios") {
+      const { status } = await Location.getForegroundPermissionsAsync();
+
+      if (status === "denied") {
+        Alert.alert(
+          "Location Permission Required",
+          "You previously denied location access. Please enable it in Settings to find nearby medical shops.",
+          [
+            { text: "Cancel", style: "cancel" },
+            { text: "Open Settings", onPress: () => Linking.openSettings() },
+          ]
+        );
+        setLoading(false);
+        return;
+      }
+
+      if (status !== "granted") {
+        const request = await Location.requestForegroundPermissionsAsync();
+        if (request.status !== "granted") {
+          Alert.alert(
+            "Permission Required",
+            "Location permission is required to find nearby medical shops."
+          );
+          setLoading(false);
+          return;
+        }
+      }
+    } else {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission Required",
+          "Location permission is required to find nearby medical shops."
+        );
+        setLoading(false);
+        return;
+      }
     }
+
     try {
-      const loc = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
       const { latitude, longitude } = loc.coords;
-      setRegion({
-        latitude,
-        longitude,
-        latitudeDelta: 0.05,
-        longitudeDelta: 0.05,
-      });
+      setRegion({ latitude, longitude, latitudeDelta: 0.05, longitudeDelta: 0.05 });
       await fetchPlaces(latitude, longitude, radius);
     } catch (err) {
       console.error("Location error:", err);
@@ -128,20 +144,17 @@ out center;`;
     }
   }, [fetchPlaces]);
 
-  useFocusEffect(
-    useCallback(() => {
-      getLocationAndFetch();
-    }, [getLocationAndFetch])
-  );
+  useFocusEffect(useCallback(() => {
+    getLocationAndFetch();
+  }, [getLocationAndFetch]));
 
   const openInMaps = () => {
     if (!selectedPlace) return;
     const { lat, lon, tags } = selectedPlace;
     const label = tags?.name || "Pharmacy";
-    const scheme =
-      Platform.OS === "ios"
-        ? `http://maps.apple.com/?daddr=${lat},${lon}&dirflg=d`
-        : `geo:0,0?q=${lat},${lon}(${label})`;
+    const scheme = Platform.OS === "ios"
+      ? `http://maps.apple.com/?daddr=${lat},${lon}&dirflg=d`
+      : `geo:0,0?q=${lat},${lon}(${label})`;
     Linking.openURL(scheme).catch(() =>
       Alert.alert("Error", "Could not open maps app.")
     );
@@ -149,10 +162,7 @@ out center;`;
 
   if (!region) {
     return (
-      <SafeAreaView
-        style={[styles.center, isDark ? styles.darkBg : styles.lightBg]}
-        edges={["top", "left", "right"]}
-      >
+      <SafeAreaView style={[styles.center, isDark ? styles.darkBg : styles.lightBg]} edges={["top","left","right"]}>
         <StatusBar style={isDark ? "light" : "dark"} />
         <ActivityIndicator size="large" color={isDark ? "#fff" : "#007AFF"} />
         <Text style={{ marginTop: 8, color: isDark ? "#fff" : "#333" }}>
@@ -163,17 +173,14 @@ out center;`;
   }
 
   return (
-    <SafeAreaView
-      style={[styles.container, isDark ? styles.darkBg : styles.lightBg]}
-      edges={["top", "left", "right", "bottom"]}
-    >
+    <SafeAreaView style={[styles.container, isDark ? styles.darkBg : styles.lightBg]} edges={["top","left","right","bottom"]}>
       <StatusBar style={isDark ? "light" : "dark"} />
       <View style={styles.innerContainer}>
         <MapView
           style={styles.map}
           region={region}
-          showsUserLocation={true}
-          showsMyLocationButton={true}
+          showsUserLocation
+          showsMyLocationButton
           customMapStyle={isDark ? DARK_MAP_STYLE : []}
           provider={Platform.OS === "android" ? MapView.PROVIDER_GOOGLE : undefined}
         >
@@ -182,14 +189,9 @@ out center;`;
               key={p.id}
               coordinate={{ latitude: p.lat, longitude: p.lon }}
               title={p.tags.name || "Medicine Shop"}
-              description={
-                p.tags["addr:street"] ||
-                p.tags["operator"] ||
-                "Pharmacy / Chemist nearby"
-              }
+              description={p.tags["addr:street"] || p.tags["operator"] || "Pharmacy / Chemist nearby"}
               onPress={() => setSelectedPlace(p)}
             >
-              {/* ✅ Custom icon instead of pin */}
               <IconSymbol name="cross.case.fill" size={28} color="#e11d48" />
             </Marker>
           ))}
@@ -204,11 +206,14 @@ out center;`;
           </View>
         )}
 
-        {selectedPlace && Platform.OS === "ios" && (
-          <TouchableOpacity style={styles.fab} onPress={openInMaps}>
-            <Text style={styles.fabText}>Directions ➡️</Text>
-          </TouchableOpacity>
-        )}
+        {Platform.OS === "ios" && selectedPlace && (
+  <TouchableOpacity style={styles.fab} onPress={openInMaps}>
+    <Text style={styles.fabText}>
+      Directions to {selectedPlace.tags?.name || "Pharmacy"} ➡️
+    </Text>
+  </TouchableOpacity>
+)}
+
       </View>
     </SafeAreaView>
   );
@@ -218,21 +223,15 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   innerContainer: { flex: 1, paddingHorizontal: 8, paddingBottom: 8 },
   map: { flex: 1, borderRadius: 12, overflow: "hidden" },
-
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-
   loadingOverlay: {
     position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
+    left: 0, right: 0, top: 0, bottom: 0,
     justifyContent: "center",
     alignItems: "center",
     zIndex: 20,
     backgroundColor: "rgba(0,0,0,0.25)",
   },
-
   fab: {
     position: "absolute",
     bottom: 20,
@@ -244,7 +243,6 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   fabText: { color: "#fff", fontWeight: "bold" },
-
   darkBg: { backgroundColor: "#0b1220" },
   lightBg: { backgroundColor: "#ffffff" },
 });

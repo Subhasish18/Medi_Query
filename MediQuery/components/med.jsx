@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 14,
     marginTop: 4,
-    maxHeight: 220,
+    maxHeight: 260,
     overflow: "hidden",
   },
   suggestionItemWrapper: {

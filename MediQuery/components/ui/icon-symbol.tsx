@@ -1,22 +1,18 @@
-// src/components/IconSymbol.tsx
-
+// IconSymbol.tsx
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { SymbolWeight } from "expo-symbols";
 import { OpaqueColorValue, type StyleProp, type TextStyle } from "react-native";
 
-// Mapping SF Symbols → MaterialCommunityIcons
 const MAPPING = {
   "house.fill": "home",
   "paperplane.fill": "send",
   "chevron.left.forwardslash.chevron.right": "code-tags",
   "chevron.right": "chevron-right",
-  "map.fill": "google-maps", // ✅ map icon
-  "cross.case.fill": "medical-bag", // ✅ pharmacy icon
-  "reminder.fill": "bell",
-  "profile.fill": "account",
+  "location.fill": "google-maps",
+  "cross.case.fill": "medical-bag",
+  "bell.fill": "bell",
+  "person.crop.circle.fill": "account",
 } as const;
 
-// ✅ Type infers all keys from MAPPING
 type IconSymbolName = keyof typeof MAPPING;
 
 export function IconSymbol({
@@ -29,7 +25,6 @@ export function IconSymbol({
   size?: number;
   color: string | OpaqueColorValue;
   style?: StyleProp<TextStyle>;
-  weight?: SymbolWeight;
 }) {
   return (
     <MaterialCommunityIcons
