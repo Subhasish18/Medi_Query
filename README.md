@@ -174,6 +174,37 @@ npm run dev   # using nodemon
 
 <hr>
 
+<h2>Backend URL (endpoint)</h2>
+<p>
+  <a src="https://medi-query.onrender.com">https://medi-query.onrender.com</a>
+  <br />
+  <p>/suggestions?q=Augmen</p>
+  <pre><code>
+  [
+  {
+    "name": "Augmentin Duo Oral Suspension"
+  },
+  {
+    "name": "Augmentin DDS Suspension"
+  },
+  {
+    "name": "Augmentin 1.2gm Injection"
+  },
+  {
+    "name": "Augmentin 375 Tablet"
+  },
+  {
+    "name": "Augmentin ES Oral Suspension"
+  },
+  {
+    "name": "Augmentin 625 Duo Tablet"
+  }
+]
+  </code></pre>
+</p>
+
+<hr>
+
 <h2>🤝 Contributing</h2>
 <p>
   Contributions, issues, and feature requests are welcome!  
