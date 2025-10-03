@@ -47,11 +47,11 @@ export default function Med() {
   // Colors for light and dark mode
   const colors = {
     background: "transparent", // no fixed background
-    card: colorScheme === "dark" ? "rgba(51, 65, 85, 1)" : "rgba(248, 250, 252, 1)",
+    card: colorScheme === "dark" ? "rgba(79, 90, 104, 1)" : "rgba(248, 250, 252, 1)",
     text: colorScheme === "dark" ? "#F8FAFC" : "#1E293B",
     label: colorScheme === "dark" ? "#CBD5E1" : "#334155",
     price: "#16A34A",
-    button: "#2563EB",
+    button: "#0EA5A4",
     placeholder: "#94A3B8",
     overlay: "rgba(0,0,0,0.7)", // modal overlay
   };
@@ -71,7 +71,7 @@ export default function Med() {
 
   const spin = spinAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ["360deg", "0deg"],
+    outputRange: ["180deg", "0deg"],
   });
 
   const handleSearch = async () => {
@@ -142,18 +142,18 @@ export default function Med() {
         <Text style={[styles.title, { color: colors.text }]}>Medical Enquiry</Text>
         <TouchableOpacity onPress={handleReset}>
           <Animated.View style={{ transform: [{ rotate: spin }] }}>
-            <SvgXml xml={refreshSvg(iconActive ? "#2563EB" : colors.text)} width="28" height="28"/>
+            <SvgXml xml={refreshSvg(iconActive ? "#ffffffff" : colors.text)} width="28" height="28"/>
           </Animated.View>
         </TouchableOpacity>
       </View>
 
-      <Text style={[styles.label, { color: colors.label }]}>Medicine Name:</Text>
+      <Text style={[styles.label, { color: colors.label }]}>Tablet Name:</Text>
 
       <View style={{ zIndex: 10 }}>
         <TextInput
           style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.label }]}
           value={medicineName}
-          placeholder="Enter medicine name"
+          placeholder="Enter tablet name"
           placeholderTextColor={colors.placeholder}
           onChangeText={handleInputChange}
         />

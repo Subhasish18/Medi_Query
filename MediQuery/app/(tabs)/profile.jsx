@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   ScrollView,
@@ -12,27 +12,56 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from "react-native";
 import { BlurView } from "expo-blur";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import Profile_Card from "@/components/profile_card";
 
-export default function Profile() {
+export default function Profile({ name }) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
 
   const [user, setUser] = useState({
-    name: "abc",
+    name: name || "John",
     age: 25,
-    height: 165.2,
-    weight: 68.5,
-    gender: "male",
+    height: 160,
+    weight: 60,
+    gender: "prefer not to say",
   });
 
   const [editModalVisible, setEditModalVisible] = useState(false);
 
-  const handleChange = (key, value) => setUser((prev) => ({ ...prev, [key]: value }));
-
   const genderOptions = ["male", "female", "prefer not to say"];
+
+  // Load stored profile
+  useEffect(() => {
+    (async () => {
+      try {
+        const savedUser = await AsyncStorage.getItem("userProfile");
+        if (savedUser) {
+          setUser(JSON.parse(savedUser));
+        }
+      } catch (err) {
+        console.error("Error loading user profile:", err);
+      }
+    })();
+  }, []);
+
+  // Save profile changes
+  const saveProfile = async () => {
+    try {
+      await AsyncStorage.setItem("userProfile", JSON.stringify(user));
+      setEditModalVisible(false);
+      Alert.alert("Success", "Profile saved successfully!");
+    } catch (err) {
+      console.error("Error saving user profile:", err);
+      Alert.alert("Error", "Could not save profile. Try again.");
+    }
+  };
+
+  const handleChange = (key, value) =>
+    setUser((prev) => ({ ...prev, [key]: value }));
 
   return (
     <KeyboardAvoidingView
@@ -40,6 +69,15 @@ export default function Profile() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView contentContainerStyle={{ padding: 16 }}>
+        <Text
+          style={[
+            styles.header,
+            isDark ? styles.headerDark : styles.headerLight,
+          ]}
+        >
+          {user.name}&#39;s Profile
+        </Text>
+
         <Profile_Card {...user} visible={true} />
 
         {/* Edit Button */}
@@ -47,59 +85,91 @@ export default function Profile() {
           style={[styles.editButton, isDark && styles.editButtonDark]}
           onPress={() => setEditModalVisible(true)}
         >
-          <Text style={[styles.editButtonText, isDark && styles.editButtonTextDark]}>
+          <Text
+            style={[styles.editButtonText, isDark && styles.editButtonTextDark]}
+          >
             Edit Profile
           </Text>
         </Pressable>
       </ScrollView>
 
       {/* Edit Modal */}
-      <Modal visible={editModalVisible} animationType="fade" transparent statusBarTranslucent>
+      <Modal
+        visible={editModalVisible}
+        animationType="fade"
+        transparent
+        statusBarTranslucent
+      >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.modalOverlay}>
-            <BlurView intensity={80} tint={isDark ? "dark" : "light"} style={styles.blur} />
+            <BlurView
+              intensity={80}
+              tint={isDark ? "dark" : "light"}
+              style={styles.blur}
+            />
 
-            <View style={[styles.modalContent, isDark && styles.modalContentDark]}>
-              <Text style={[styles.modalTitle, isDark && styles.modalTitleDark]}>Edit Profile</Text>
+            <View
+              style={[styles.modalContent, isDark && styles.modalContentDark]}
+            >
+              <Text
+                style={[styles.modalTitle, isDark && styles.modalTitleDark]}
+              >
+                Edit Profile
+              </Text>
 
               {/* Name */}
-              <Text style={[styles.label, isDark && styles.labelDark]}>Name</Text>
+              <Text style={[styles.label, isDark && styles.labelDark]}>
+                Name
+              </Text>
               <TextInput
                 style={[styles.input, isDark && styles.inputDark]}
                 value={user.name}
-                placeholder={user.name}
                 editable={false}
               />
 
               {/* Age */}
-              <Text style={[styles.label, isDark && styles.labelDark]}>Age</Text>
+              <Text style={[styles.label, isDark && styles.labelDark]}>
+                Age
+              </Text>
               <TextInput
                 style={[styles.input, isDark && styles.inputDark]}
                 value={String(user.age)}
                 keyboardType="numeric"
-                onChangeText={(text) => handleChange("age", parseInt(text) || 0)}
+                onChangeText={(text) =>
+                  handleChange("age", parseInt(text) || 0)
+                }
               />
 
               {/* Height */}
-              <Text style={[styles.label, isDark && styles.labelDark]}>Height (cm)</Text>
+              <Text style={[styles.label, isDark && styles.labelDark]}>
+                Height (cm)
+              </Text>
               <TextInput
                 style={[styles.input, isDark && styles.inputDark]}
                 value={String(user.height)}
                 keyboardType="numeric"
-                onChangeText={(text) => handleChange("height", parseFloat(text) || 0)}
+                onChangeText={(text) =>
+                  handleChange("height", parseFloat(text) || 0)
+                }
               />
 
               {/* Weight */}
-              <Text style={[styles.label, isDark && styles.labelDark]}>Weight (kg)</Text>
+              <Text style={[styles.label, isDark && styles.labelDark]}>
+                Weight (kg)
+              </Text>
               <TextInput
                 style={[styles.input, isDark && styles.inputDark]}
                 value={String(user.weight)}
                 keyboardType="numeric"
-                onChangeText={(text) => handleChange("weight", parseFloat(text) || 0)}
+                onChangeText={(text) =>
+                  handleChange("weight", parseFloat(text) || 0)
+                }
               />
 
               {/* Gender */}
-              <Text style={[styles.label, isDark && styles.labelDark]}>Gender</Text>
+              <Text style={[styles.label, isDark && styles.labelDark]}>
+                Gender
+              </Text>
               <View style={styles.genderContainer}>
                 {genderOptions.map((option) => {
                   const selected = user.gender === option;
@@ -109,7 +179,10 @@ export default function Profile() {
                       style={[
                         styles.genderButton,
                         isDark && styles.genderButtonDark,
-                        selected && (isDark ? styles.genderSelectedDark : styles.genderSelected),
+                        selected &&
+                          (isDark
+                            ? styles.genderSelectedDark
+                            : styles.genderSelected),
                       ]}
                       onPress={() => handleChange("gender", option)}
                     >
@@ -130,9 +203,14 @@ export default function Profile() {
               {/* Save / Cancel */}
               <Pressable
                 style={[styles.saveButton, isDark && styles.saveButtonDark]}
-                onPress={() => setEditModalVisible(false)}
+                onPress={saveProfile}
               >
-                <Text style={[styles.saveButtonText, isDark && styles.saveButtonTextDark]}>
+                <Text
+                  style={[
+                    styles.saveButtonText,
+                    isDark && styles.saveButtonTextDark,
+                  ]}
+                >
                   Save Changes
                 </Text>
               </Pressable>
@@ -141,7 +219,12 @@ export default function Profile() {
                 style={[styles.cancelButton, isDark && styles.cancelButtonDark]}
                 onPress={() => setEditModalVisible(false)}
               >
-                <Text style={[styles.cancelButtonText, isDark && styles.cancelButtonTextDark]}>
+                <Text
+                  style={[
+                    styles.cancelButtonText,
+                    isDark && styles.cancelButtonTextDark,
+                  ]}
+                >
                   Cancel
                 </Text>
               </Pressable>
@@ -157,16 +240,40 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   darkBg: { backgroundColor: "#121212" },
   lightBg: { backgroundColor: "#F0FDF4" },
-
+  header: {
+    fontSize: 20,
+    fontWeight: "700",
+    textAlign: "left",
+    marginTop: 20,
+    paddingBottom: 0,
+    paddingHorizontal: 0,
+  },
+  headerLight: {
+    color: "#1F2937", // dark gray for light mode
+  },
+  headerDark: {
+    color: "#F3F4F6", // light gray/white for dark mode
+  },
   editButton: {
-    marginVertical: 16,
+    alignSelf: "flex-end", // pushes it to the right
+    minWidth: 120, // set minimum width
+    maxWidth: 160, // set maximum width
     paddingVertical: 12,
+    paddingHorizontal: 16,
     backgroundColor: "#0EA5A4",
     borderRadius: 12,
     alignItems: "center",
+    marginTop: 12,
+    marginRight: 16, // add spacing from right edge
   },
-  editButtonDark: { backgroundColor: "#0EA5A4" },
-  editButtonText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
+  editButtonDark: {
+    backgroundColor: "#0EA5A4",
+  },
+  editButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
   editButtonTextDark: { color: "#fff" },
 
   modalOverlay: { flex: 1, justifyContent: "center", alignItems: "center" },
@@ -181,7 +288,13 @@ const styles = StyleSheet.create({
   },
   modalContentDark: { backgroundColor: "#1E293B" },
 
-  modalTitle: { fontSize: 20, fontWeight: "700", marginBottom: 16, textAlign: "center", color: "#1F2937" },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 16,
+    textAlign: "center",
+    color: "#1F2937",
+  },
   modalTitleDark: { color: "#E5E7EB" },
 
   label: { marginBottom: 6, fontWeight: "600", color: "#1F2937" },
@@ -197,9 +310,17 @@ const styles = StyleSheet.create({
     borderColor: "#D1D5DB",
     color: "#1F2937",
   },
-  inputDark: { backgroundColor: "#2A2A2A", borderColor: "#334155", color: "#E5E7EB" },
+  inputDark: {
+    backgroundColor: "#2A2A2A",
+    borderColor: "#334155",
+    color: "#E5E7EB",
+  },
 
-  genderContainer: { flexDirection: "row", justifyContent: "space-between", marginBottom: 12 },
+  genderContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
   genderButton: {
     flex: 1,
     paddingVertical: 10,
@@ -216,12 +337,24 @@ const styles = StyleSheet.create({
   genderTextDark: { color: "#E5E7EB", fontWeight: "600" },
   genderTextSelected: { color: "#fff" },
 
-  saveButton: { backgroundColor: "#38BDF8", paddingVertical: 12, borderRadius: 12, alignItems: "center", marginTop: 10 },
+  saveButton: {
+    backgroundColor: "#38BDF8",
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+    marginTop: 10,
+  },
   saveButtonDark: { backgroundColor: "#0EA5A4" },
   saveButtonText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
   saveButtonTextDark: { color: "#fff" },
 
-  cancelButton: { backgroundColor: "#EF4444", paddingVertical: 12, borderRadius: 12, alignItems: "center", marginTop: 8 },
+  cancelButton: {
+    backgroundColor: "#EF4444",
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+    marginTop: 8,
+  },
   cancelButtonDark: { backgroundColor: "#F87171" },
   cancelButtonText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
   cancelButtonTextDark: { color: "#fff" },

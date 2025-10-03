@@ -15,16 +15,28 @@ import MapView, { Marker } from "react-native-maps";
 import * as Location from "expo-location";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import { useFocusEffect } from "@react-navigation/native"; 
+import { useFocusEffect } from "@react-navigation/native";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 
 const DARK_MAP_STYLE = [
   { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
   { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
   { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
-  { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
-  { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
-  { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] },
+  {
+    featureType: "poi",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#d59563" }],
+  },
+  {
+    featureType: "road",
+    elementType: "geometry",
+    stylers: [{ color: "#38414e" }],
+  },
+  {
+    featureType: "water",
+    elementType: "geometry",
+    stylers: [{ color: "#17263c" }],
+  },
 ];
 
 export default function Maps() {
@@ -75,8 +87,15 @@ out center;`;
 
       const elements = (json.elements || [])
         .map((el) => {
-          if (el.type === "node") return { id: el.id, lat: el.lat, lon: el.lon, tags: el.tags || {} };
-          if (el.type === "way" && el.center) return { id: el.id, lat: el.center.lat, lon: el.center.lon, tags: el.tags || {} };
+          if (el.type === "node")
+            return { id: el.id, lat: el.lat, lon: el.lon, tags: el.tags || {} };
+          if (el.type === "way" && el.center)
+            return {
+              id: el.id,
+              lat: el.center.lat,
+              lon: el.center.lon,
+              tags: el.tags || {},
+            };
           return null;
         })
         .filter(Boolean);
@@ -133,9 +152,16 @@ out center;`;
     }
 
     try {
-      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
       const { latitude, longitude } = loc.coords;
-      setRegion({ latitude, longitude, latitudeDelta: 0.05, longitudeDelta: 0.05 });
+      setRegion({
+        latitude,
+        longitude,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      });
       await fetchPlaces(latitude, longitude, radius);
     } catch (err) {
       console.error("Location error:", err);
@@ -144,17 +170,20 @@ out center;`;
     }
   }, [fetchPlaces]);
 
-  useFocusEffect(useCallback(() => {
-    getLocationAndFetch();
-  }, [getLocationAndFetch]));
+  useFocusEffect(
+    useCallback(() => {
+      getLocationAndFetch();
+    }, [getLocationAndFetch])
+  );
 
   const openInMaps = () => {
     if (!selectedPlace) return;
     const { lat, lon, tags } = selectedPlace;
     const label = tags?.name || "Pharmacy";
-    const scheme = Platform.OS === "ios"
-      ? `http://maps.apple.com/?daddr=${lat},${lon}&dirflg=d`
-      : `geo:0,0?q=${lat},${lon}(${label})`;
+    const scheme =
+      Platform.OS === "ios"
+        ? `http://maps.apple.com/?daddr=${lat},${lon}&dirflg=d`
+        : `geo:0,0?q=${lat},${lon}(${label})`;
     Linking.openURL(scheme).catch(() =>
       Alert.alert("Error", "Could not open maps app.")
     );
@@ -162,7 +191,10 @@ out center;`;
 
   if (!region) {
     return (
-      <SafeAreaView style={[styles.center, isDark ? styles.darkBg : styles.lightBg]} edges={["top","left","right"]}>
+      <SafeAreaView
+        style={[styles.center, isDark ? styles.darkBg : styles.lightBg]}
+        edges={["top", "left", "right"]}
+      >
         <StatusBar style={isDark ? "light" : "dark"} />
         <ActivityIndicator size="large" color={isDark ? "#fff" : "#007AFF"} />
         <Text style={{ marginTop: 8, color: isDark ? "#fff" : "#333" }}>
@@ -173,8 +205,17 @@ out center;`;
   }
 
   return (
-    <SafeAreaView style={[styles.container, isDark ? styles.darkBg : styles.lightBg]} edges={["top","left","right","bottom"]}>
+    <SafeAreaView
+      style={[styles.container, isDark ? styles.darkBg : styles.lightBg]}
+      edges={["top", "left", "right", "bottom"]}
+    >
       <StatusBar style={isDark ? "light" : "dark"} />
+      <Text
+        style={[styles.header, isDark ? styles.headerDark : styles.headerLight]}
+      >
+        Nearest Medical Shops
+      </Text>
+
       <View style={styles.innerContainer}>
         <MapView
           style={styles.map}
@@ -182,14 +223,20 @@ out center;`;
           showsUserLocation
           showsMyLocationButton
           customMapStyle={isDark ? DARK_MAP_STYLE : []}
-          provider={Platform.OS === "android" ? MapView.PROVIDER_GOOGLE : undefined}
+          provider={
+            Platform.OS === "android" ? MapView.PROVIDER_GOOGLE : undefined
+          }
         >
           {places.map((p) => (
             <Marker
               key={p.id}
               coordinate={{ latitude: p.lat, longitude: p.lon }}
               title={p.tags.name || "Medicine Shop"}
-              description={p.tags["addr:street"] || p.tags["operator"] || "Pharmacy / Chemist nearby"}
+              description={
+                p.tags["addr:street"] ||
+                p.tags["operator"] ||
+                "Pharmacy / Chemist nearby"
+              }
               onPress={() => setSelectedPlace(p)}
             >
               <IconSymbol name="cross.case.fill" size={28} color="#e11d48" />
@@ -199,7 +246,10 @@ out center;`;
 
         {loading && (
           <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color={isDark ? "#fff" : "#007AFF"} />
+            <ActivityIndicator
+              size="large"
+              color={isDark ? "#fff" : "#007AFF"}
+            />
             <Text style={{ marginTop: 8, color: isDark ? "#fff" : "#333" }}>
               Loading nearby medicine shops...
             </Text>
@@ -207,13 +257,12 @@ out center;`;
         )}
 
         {Platform.OS === "ios" && selectedPlace && (
-  <TouchableOpacity style={styles.fab} onPress={openInMaps}>
-    <Text style={styles.fabText}>
-      Directions to {selectedPlace.tags?.name || "Pharmacy"} ➡️
-    </Text>
-  </TouchableOpacity>
-)}
-
+          <TouchableOpacity style={styles.fab} onPress={openInMaps}>
+            <Text style={styles.fabText}>
+              Directions to {selectedPlace.tags?.name || "Pharmacy"} ➡️
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -226,7 +275,10 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
   loadingOverlay: {
     position: "absolute",
-    left: 0, right: 0, top: 0, bottom: 0,
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
     justifyContent: "center",
     alignItems: "center",
     zIndex: 20,
@@ -243,6 +295,20 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   fabText: { color: "#fff", fontWeight: "bold" },
-  darkBg: { backgroundColor: "#0b1220" },
-  lightBg: { backgroundColor: "#ffffff" },
+  darkBg: { backgroundColor: "#121212" },
+  lightBg: { backgroundColor: "#F0FDF4" },
+  header: {
+    fontSize: 20,
+    fontWeight: "700",
+    textAlign: "left",
+    marginTop: 5,
+    paddingBottom: 10,
+    paddingHorizontal: 16,
+  },
+  headerLight: {
+    color: "#1F2937", // dark gray for light mode
+  },
+  headerDark: {
+    color: "#F3F4F6", // light gray/white for dark mode
+  },
 });

@@ -9,11 +9,13 @@ import {
   Alert,
   Platform,
   useColorScheme,
+  KeyboardAvoidingView,
+  ScrollView,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
-import { first_name } from "./profile"; // profile.js should export: export const first_name = "John";
+// import { first_name } from "./profile"; // profile.js should export: export const first_name = "John";
 
 const STORAGE_KEY = "@reminders_v1";
 const PRESET_TIMES = {
@@ -36,9 +38,11 @@ function computeNotificationDate(baseDate, hour, minute, offsetMinutes = 0) {
   return d;
 }
 
-export default function Reminder() {
+export default function Reminder({ name }) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+
+  const first_name = name || "John"; // Default name if not imported
 
   const [medicine, setMedicine] = useState("");
   const [timeMode, setTimeMode] = useState("breakfast"); // breakfast|lunch|dinner|custom
@@ -125,7 +129,12 @@ export default function Reminder() {
         const id = await Notifications.scheduleNotificationAsync({
           content: {
             title: `💊 Reminder`,
-            body: `Take ${reminder.medicine} (${reminder.beforeAfter} food) at ${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
+            body: `Take ${reminder.medicine} (${
+              reminder.beforeAfter
+            } food) at ${d.toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}`,
             sound: true,
           },
           trigger: d,
@@ -138,7 +147,12 @@ export default function Reminder() {
       const id = await Notifications.scheduleNotificationAsync({
         content: {
           title: `💊 Reminder`,
-          body: `Take ${reminder.medicine} (${reminder.beforeAfter} food) at ${notifDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
+          body: `Take ${reminder.medicine} (${
+            reminder.beforeAfter
+          } food) at ${notifDate.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}`,
           sound: true,
         },
         trigger: {
@@ -207,7 +221,12 @@ export default function Reminder() {
 
     const offsetMinutes = (beforeAfter === "before" ? -1 : 1) * offset;
     const baseDate = new Date();
-    const notifDate = computeNotificationDate(baseDate, hour, minute, offsetMinutes);
+    const notifDate = computeNotificationDate(
+      baseDate,
+      hour,
+      minute,
+      offsetMinutes
+    );
 
     const id = Date.now().toString();
     const reminder = {
@@ -265,151 +284,281 @@ export default function Reminder() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Text style={[styles.header, { color: colors.text }]}>Hello, {first_name} 👋</Text>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+    >
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1, padding: 16, paddingBottom: 60 }}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Text style={[styles.header, { color: colors.text }]}>
+          {first_name}&#39;s Reminder
+        </Text>
 
-      {/* Form */}
-      <View style={[styles.card, { backgroundColor: colors.card }]}>
-        <TextInput
-          placeholder="Medicine name"
-          placeholderTextColor={colors.chipText}
-          style={[styles.input, { backgroundColor: colors.input, borderColor: colors.border, color: colors.text }]}
-          value={medicine}
-          onChangeText={setMedicine}
-        />
-
-        <Text style={[styles.label, { color: colors.text }]}>Select Time</Text>
-        <View style={styles.row}>
-          {["breakfast", "lunch", "dinner", "custom"].map((m) => (
-            <Pressable
-              key={m}
-              style={[styles.chip, { backgroundColor: timeMode === m ? colors.chipActive : colors.input, borderColor: colors.border }]}
-              onPress={() => {
-                setTimeMode(m);
-                if (m === "custom") setShowTimePicker(true);
-              }}
-            >
-              <Text style={{ color: timeMode === m ? "#fff" : colors.chipText }}>{m}</Text>
-            </Pressable>
-          ))}
-        </View>
-
-        {timeMode === "custom" && showTimePicker && (
-          <DateTimePicker
-            value={customTime}
-            mode="time"
-            is24Hour
-            display={Platform.OS === "ios" ? "spinner" : "default"}
-            onChange={(e, date) => {
-              setShowTimePicker(false);
-              if (date) setCustomTime(date);
-            }}
+        {/* Form */}
+        <View style={[styles.card, { backgroundColor: colors.card }]}>
+          <TextInput
+            placeholder="Medicine name"
+            placeholderTextColor={colors.chipText}
+            style={[
+              styles.input,
+              {
+                backgroundColor: colors.input,
+                borderColor: colors.border,
+                color: colors.text,
+              },
+            ]}
+            value={medicine}
+            onChangeText={setMedicine}
           />
-        )}
 
-        <Text style={[styles.label, { color: colors.text }]}>Before / After Food</Text>
-        <View style={styles.row}>
-          {["before", "after"].map((opt) => (
-            <Pressable
-              key={opt}
-              style={[styles.chip, { backgroundColor: beforeAfter === opt ? colors.chipActive : colors.input, borderColor: colors.border }]}
-              onPress={() => setBeforeAfter(opt)}
-            >
-              <Text style={{ color: beforeAfter === opt ? "#fff" : colors.chipText }}>{opt}</Text>
-            </Pressable>
-          ))}
-          {[15, 30].map((m) => (
-            <Pressable
-              key={m}
-              style={[styles.chip, { backgroundColor: offset === m ? colors.chipActive : colors.input, borderColor: colors.border }]}
-              onPress={() => setOffset(m)}
-            >
-              <Text style={{ color: offset === m ? "#fff" : colors.chipText }}>{m} min</Text>
-            </Pressable>
-          ))}
-        </View>
-
-        <Text style={[styles.label, { color: colors.text }]}>End Date (optional)</Text>
-        <Pressable
-          style={[styles.timeBtn, { borderColor: colors.border }]}
-          onPress={() => setShowEndDatePicker(true)}
-        >
-          <Text style={{ color: colors.text }}>
-            {endDate ? endDate.toLocaleDateString() : "Select End Date"}
+          <Text style={[styles.label, { color: colors.text }]}>
+            Select Time
           </Text>
-        </Pressable>
-        {showEndDatePicker && (
-          <DateTimePicker
-            value={endDate || new Date()}
-            mode="date"
-            display={Platform.OS === "ios" ? "spinner" : "default"}
-            minimumDate={new Date()}
-            onChange={(e, date) => {
-              setShowEndDatePicker(false);
-              if (date) setEndDate(date);
-            }}
-          />
-        )}
-
-        <Pressable style={[styles.saveBtn, { backgroundColor: colors.chipActive }]} onPress={addReminder}>
-          <Text style={{ color: "#fff", fontWeight: "600" }}>Save Reminder</Text>
-        </Pressable>
-      </View>
-
-      {/* List */}
-      <Text style={[styles.sectionHeader, { color: colors.text }]}>Your Reminders</Text>
-      <FlatList
-        data={Array.isArray(reminders) ? reminders : []}
-        keyExtractor={(item) => item?.id ?? Math.random().toString()}
-        ListEmptyComponent={<Text style={{ color: colors.text }}>No reminders yet.</Text>}
-        renderItem={({ item }) => {
-          if (!item) return null;
-          return (
-            <View style={[styles.reminderRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              {/* Delete button on left */}
-              <Pressable style={[styles.smallBtn, { backgroundColor: "#fee2e2", marginRight: 8 }]} onPress={() => deleteReminder(item.id)}>
-                <Text>🗑️</Text>
-              </Pressable>
-
-              {/* Reminder info */}
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.reminderTitle, { color: colors.text }]}>{item.medicine ?? "Unknown"}</Text>
-                <Text style={[styles.reminderMeta, { color: colors.text }]}>
-                  {item.repeat ? "Daily" : "One-time"} • {item.date ? new Date(item.date).toLocaleString() : "N/A"}
+          <View style={styles.row}>
+            {["breakfast", "lunch", "dinner", "custom"].map((m) => (
+              <Pressable
+                key={m}
+                style={[
+                  styles.chip,
+                  {
+                    backgroundColor:
+                      timeMode === m ? colors.chipActive : colors.input,
+                    borderColor: colors.border,
+                  },
+                ]}
+                onPress={() => {
+                  setTimeMode(m);
+                  if (m === "custom") setShowTimePicker(true);
+                }}
+              >
+                <Text
+                  style={{ color: timeMode === m ? "#fff" : colors.chipText }}
+                >
+                  {m}
                 </Text>
-                {item.endDate && <Text style={[styles.reminderMeta, { color: colors.text }]}>Ends: {new Date(item.endDate).toLocaleDateString()}</Text>}
-                <Text style={[styles.reminderMeta, { color: colors.text }]}>Status: {item.status ?? "pending"}</Text>
-              </View>
+              </Pressable>
+            ))}
+          </View>
 
-              {/* Right buttons */}
-              <View style={styles.rightButtons}>
-                <Pressable style={[styles.smallBtn, { backgroundColor: colors.smallBtnBg }]} onPress={() => markStatus(item.id, "taken")}>
-                  <Text>✅</Text>
+          {timeMode === "custom" && showTimePicker && (
+            <DateTimePicker
+              value={customTime}
+              mode="time"
+              is24Hour
+              display={Platform.OS === "ios" ? "spinner" : "default"}
+              onChange={(e, date) => {
+                setShowTimePicker(false);
+                if (date) setCustomTime(date);
+              }}
+            />
+          )}
+
+          <Text style={[styles.label, { color: colors.text }]}>
+            Before / After Food
+          </Text>
+          <View style={styles.row}>
+            {["before", "after"].map((opt) => (
+              <Pressable
+                key={opt}
+                style={[
+                  styles.chip,
+                  {
+                    backgroundColor:
+                      beforeAfter === opt ? colors.chipActive : colors.input,
+                    borderColor: colors.border,
+                  },
+                ]}
+                onPress={() => setBeforeAfter(opt)}
+              >
+                <Text
+                  style={{
+                    color: beforeAfter === opt ? "#fff" : colors.chipText,
+                  }}
+                >
+                  {opt}
+                </Text>
+              </Pressable>
+            ))}
+            {[15, 30].map((m) => (
+              <Pressable
+                key={m}
+                style={[
+                  styles.chip,
+                  {
+                    backgroundColor:
+                      offset === m ? colors.chipActive : colors.input,
+                    borderColor: colors.border,
+                  },
+                ]}
+                onPress={() => setOffset(m)}
+              >
+                <Text
+                  style={{ color: offset === m ? "#fff" : colors.chipText }}
+                >
+                  {m} min
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          <Text style={[styles.label, { color: colors.text }]}>
+            End Date (optional)
+          </Text>
+          <Pressable
+            style={[styles.timeBtn, { borderColor: colors.border }]}
+            onPress={() => setShowEndDatePicker(true)}
+          >
+            <Text style={{ color: colors.text }}>
+              {endDate ? endDate.toLocaleDateString() : "Select End Date"}
+            </Text>
+          </Pressable>
+          {showEndDatePicker && (
+            <DateTimePicker
+              value={endDate || new Date()}
+              mode="date"
+              display={Platform.OS === "ios" ? "spinner" : "default"}
+              minimumDate={new Date()}
+              onChange={(e, date) => {
+                setShowEndDatePicker(false);
+                if (date) setEndDate(date);
+              }}
+            />
+          )}
+
+          <Pressable
+            style={[styles.saveBtn, { backgroundColor: colors.chipActive }]}
+            onPress={addReminder}
+          >
+            <Text style={{ color: "#fff", fontWeight: "600" }}>
+              Save Reminder
+            </Text>
+          </Pressable>
+        </View>
+
+        {/* List */}
+        <Text style={[styles.sectionHeader, { color: colors.text }]}>
+          Your Reminders
+        </Text>
+        <FlatList
+          data={Array.isArray(reminders) ? reminders : []}
+          keyExtractor={(item) => item?.id ?? Math.random().toString()}
+          ListEmptyComponent={
+            <Text style={{ color: colors.text }}>No reminders yet.</Text>
+          }
+          renderItem={({ item }) => {
+            if (!item) return null;
+            return (
+              <View
+                style={[
+                  styles.reminderRow,
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                ]}
+              >
+                {/* Delete button on left */}
+                <Pressable
+                  style={[
+                    styles.smallBtn,
+                    { backgroundColor: "#fee2e2", marginRight: 8 },
+                  ]}
+                  onPress={() => deleteReminder(item.id)}
+                >
+                  <Text>🗑️</Text>
                 </Pressable>
-                <Pressable style={[styles.smallBtn, { backgroundColor: colors.smallBtnBg }]} onPress={() => markStatus(item.id, "missed")}>
-                  <Text>❌</Text>
-                </Pressable>
+
+                {/* Reminder info */}
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.reminderTitle, { color: colors.text }]}>
+                    {item.medicine ?? "Unknown"}
+                  </Text>
+                  <Text style={[styles.reminderMeta, { color: colors.text }]}>
+                    {item.repeat ? "Daily" : "One-time"} •{" "}
+                    {item.date ? new Date(item.date).toLocaleString() : "N/A"}
+                  </Text>
+                  {item.endDate && (
+                    <Text style={[styles.reminderMeta, { color: colors.text }]}>
+                      Ends: {new Date(item.endDate).toLocaleDateString()}
+                    </Text>
+                  )}
+                  <Text style={[styles.reminderMeta, { color: colors.text }]}>
+                    Status: {item.status ?? "pending"}
+                  </Text>
+                </View>
+
+                {/* Right buttons */}
+                <View style={styles.rightButtons}>
+                  <Pressable
+                    style={[
+                      styles.smallBtn,
+                      { backgroundColor: colors.smallBtnBg },
+                    ]}
+                    onPress={() => markStatus(item.id, "taken")}
+                  >
+                    <Text>✅</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[
+                      styles.smallBtn,
+                      { backgroundColor: colors.smallBtnBg },
+                    ]}
+                    onPress={() => markStatus(item.id, "missed")}
+                  >
+                    <Text>❌</Text>
+                  </Pressable>
+                </View>
               </View>
-            </View>
-          );
-        }}
-      />
-    </View>
+            );
+          }}
+        />
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, marginTop: 20 },
-  header: { fontSize: 20, fontWeight: "700", marginBottom: 12 },
-  card: { padding: 16, borderRadius: 20, marginBottom: 20, shadowColor: "#000", shadowOpacity: 0.05, shadowOffset: { width: 0, height: 4 }, shadowRadius: 8, elevation: 3 },
+  container: { flex: 1 },
+ 
+   header: {
+    fontSize: 20,
+    fontWeight: "700",
+    textAlign: "left",
+    marginTop: 20,
+    paddingBottom: 12,
+    paddingHorizontal: 0,
+  },
+  card: {
+    padding: 16,
+    borderRadius: 20,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
+    elevation: 3,
+  },
   input: { borderWidth: 1, padding: 10, borderRadius: 12, marginBottom: 10 },
   label: { fontWeight: "600", marginTop: 10, marginBottom: 4 },
   row: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  chip: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1, margin: 4 },
+  chip: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    borderWidth: 1,
+    margin: 4,
+  },
   timeBtn: { marginTop: 8, padding: 10, borderWidth: 1, borderRadius: 12 },
   saveBtn: { marginTop: 14, padding: 12, borderRadius: 14, alignItems: "center" },
   sectionHeader: { fontWeight: "700", marginBottom: 6 },
-  reminderRow: { flexDirection: "row", alignItems: "center", padding: 12, borderRadius: 16, marginVertical: 6, borderWidth: 1 },
+  reminderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    borderRadius: 16,
+    marginVertical: 6,
+    borderWidth: 1,
+  },
   reminderTitle: { fontWeight: "700" },
   reminderMeta: { fontSize: 12 },
   smallBtn: { padding: 6, borderRadius: 8, marginVertical: 2, alignItems: "center" },

@@ -20,7 +20,7 @@ export default function HomeScreen() {
     <SafeAreaView
       style={[
         styles.container,
-        { backgroundColor: isDark ? "#1E293B" : "#deebf8ff" },
+        { backgroundColor: isDark ? "#121212" : "#F0FDF4" },
       ]}
     >
       <ScrollView
