@@ -47,7 +47,10 @@ export default function Med() {
   // Colors for light and dark mode
   const colors = {
     background: "transparent", // no fixed background
-    card: colorScheme === "dark" ? "rgba(79, 90, 104, 1)" : "rgba(248, 250, 252, 1)",
+    card:
+      colorScheme === "dark"
+        ? "rgba(79, 90, 104, 1)"
+        : "rgba(248, 250, 252, 1)",
     text: colorScheme === "dark" ? "#F8FAFC" : "#1E293B",
     label: colorScheme === "dark" ? "#CBD5E1" : "#334155",
     price: "#16A34A",
@@ -59,8 +62,17 @@ export default function Med() {
   const handleReset = () => {
     setIconActive(true);
     Animated.sequence([
-      Animated.timing(spinAnim, { toValue: 1, duration: 600, easing: Easing.linear, useNativeDriver: true }),
-      Animated.timing(spinAnim, { toValue: 0, duration: 0, useNativeDriver: true }),
+      Animated.timing(spinAnim, {
+        toValue: 1,
+        duration: 600,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+      Animated.timing(spinAnim, {
+        toValue: 0,
+        duration: 0,
+        useNativeDriver: true,
+      }),
     ]).start(() => setIconActive(false));
 
     setMedicineName("");
@@ -78,17 +90,27 @@ export default function Med() {
     if (!medicineName.trim()) return;
     try {
       setLoadingSearch(true);
-      const res = await fetch(`${API_BASE}/medicine?name=${encodeURIComponent(medicineName)}`);
+      const res = await fetch(
+        `${API_BASE}/medicine?name=${encodeURIComponent(medicineName)}`
+      );
       const json = await res.json();
       setSearchResult(json || null);
 
       let subs = [];
       if (json) {
-        const substituteKeys = ["substitute0","substitute1","substitute2","substitute3","substitute4"];
+        const substituteKeys = [
+          "substitute0",
+          "substitute1",
+          "substitute2",
+          "substitute3",
+          "substitute4",
+        ];
         for (const key of substituteKeys) {
           if (json[key]) {
             try {
-              const subRes = await fetch(`${API_BASE}/medicine?name=${encodeURIComponent(json[key])}`);
+              const subRes = await fetch(
+                `${API_BASE}/medicine?name=${encodeURIComponent(json[key])}`
+              );
               if (subRes.ok) {
                 const subJson = await subRes.json();
                 subs.push(subJson || { name: json[key] });
@@ -100,6 +122,15 @@ export default function Med() {
             }
           }
         }
+        subs.sort((a, b) => {
+          const priceA = isNaN(parseFloat(a?.price))
+            ? -Infinity
+            : parseFloat(a.price);
+          const priceB = isNaN(parseFloat(b?.price))
+            ? -Infinity
+            : parseFloat(b.price);
+          return priceA - priceB;
+        });
       }
       setSimilarMeds(subs);
     } catch (err) {
@@ -118,7 +149,9 @@ export default function Med() {
     }
     setLoadingSuggestions(true);
     try {
-      const res = await fetch(`${API_BASE}/suggestions?q=${encodeURIComponent(text)}`);
+      const res = await fetch(
+        `${API_BASE}/suggestions?q=${encodeURIComponent(text)}`
+      );
       if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
       const json = await res.json();
       setSuggestions(Array.isArray(json) ? json.slice(0, 6) : []);
@@ -138,11 +171,23 @@ export default function Med() {
 
   const renderHeader = () => (
     <View style={{ paddingBottom: 20 }}>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <Text style={[styles.title, { color: colors.text }]}>Medical Enquiry</Text>
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <Text style={[styles.title, { color: colors.text }]}>
+          Medical Enquiry
+        </Text>
         <TouchableOpacity onPress={handleReset}>
           <Animated.View style={{ transform: [{ rotate: spin }] }}>
-            <SvgXml xml={refreshSvg(iconActive ? "#ffffffff" : colors.text)} width="28" height="28"/>
+            <SvgXml
+              xml={refreshSvg(iconActive ? "#ffffffff" : colors.text)}
+              width="28"
+              height="28"
+            />
           </Animated.View>
         </TouchableOpacity>
       </View>
@@ -151,7 +196,14 @@ export default function Med() {
 
       <View style={{ zIndex: 10 }}>
         <TextInput
-          style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.label }]}
+          style={[
+            styles.input,
+            {
+              backgroundColor: colors.card,
+              color: colors.text,
+              borderColor: colors.label,
+            },
+          ]}
           value={medicineName}
           placeholder="Enter tablet name"
           placeholderTextColor={colors.placeholder}
@@ -159,7 +211,12 @@ export default function Med() {
         />
 
         {medicineName.length > 0 && suggestions.length > 0 && (
-          <View style={[styles.suggestionBox, { backgroundColor: colors.card, borderColor: colors.label }]}>
+          <View
+            style={[
+              styles.suggestionBox,
+              { backgroundColor: colors.card, borderColor: colors.label },
+            ]}
+          >
             {loadingSuggestions ? (
               <ActivityIndicator size="small" color={colors.button} />
             ) : (
@@ -167,8 +224,15 @@ export default function Med() {
                 data={suggestions.filter((item) => item && item.name)}
                 keyExtractor={(item, index) => item._id || index.toString()}
                 renderItem={({ item }) => (
-                  <TouchableOpacity style={styles.suggestionItemWrapper} onPress={() => handleSuggestionPress(item)}>
-                    <Text style={[styles.suggestionItem, { color: colors.text }]}>{item.name}</Text>
+                  <TouchableOpacity
+                    style={styles.suggestionItemWrapper}
+                    onPress={() => handleSuggestionPress(item)}
+                  >
+                    <Text
+                      style={[styles.suggestionItem, { color: colors.text }]}
+                    >
+                      {item.name}
+                    </Text>
                   </TouchableOpacity>
                 )}
               />
@@ -177,8 +241,15 @@ export default function Med() {
         )}
       </View>
 
-      <TouchableOpacity style={[styles.button, { backgroundColor: colors.button }]} onPress={handleSearch}>
-        {loadingSearch ? <ActivityIndicator size="small" color="#fff"/> : <Text style={styles.buttonText}>Search</Text>}
+      <TouchableOpacity
+        style={[styles.button, { backgroundColor: colors.button }]}
+        onPress={handleSearch}
+      >
+        {loadingSearch ? (
+          <ActivityIndicator size="small" color="#fff" />
+        ) : (
+          <Text style={styles.buttonText}>Search</Text>
+        )}
       </TouchableOpacity>
 
       {searchResult && (
@@ -192,9 +263,18 @@ export default function Med() {
 
       {similarMeds.length > 0 && (
         <View style={{ marginTop: 16 }}>
-          <Text style={[styles.label, { color: colors.text, fontWeight: "700" }]}>Suggested:</Text>
+          <Text
+            style={[styles.label, { color: colors.text, fontWeight: "700" }]}
+          >
+            Suggested:
+          </Text>
           {similarMeds.map((med, idx) => (
-            <MedicineCard key={med._id || idx} data={med} colors={colors} onLongPress={() => setModalVisible(true)} />
+            <MedicineCard
+              key={med._id || idx}
+              data={med}
+              colors={colors}
+              onLongPress={() => setModalVisible(true)}
+            />
           ))}
         </View>
       )}
@@ -202,7 +282,13 @@ export default function Med() {
   );
 
   return (
-    <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 16, backgroundColor: colors.background }}>
+    <ScrollView
+      contentContainerStyle={{
+        flexGrow: 1,
+        padding: 16,
+        backgroundColor: colors.background,
+      }}
+    >
       {renderHeader()}
 
       {/* Modal */}
@@ -212,24 +298,55 @@ export default function Med() {
         animationType="fade"
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={[styles.modalBackground, { backgroundColor: colors.overlay }]}>
+        <View
+          style={[styles.modalBackground, { backgroundColor: colors.overlay }]}
+        >
           <View style={[styles.modalCard, { backgroundColor: colors.card }]}>
             <ScrollView contentContainerStyle={{ paddingBottom: 16 }}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>{searchResult?.name || "N/A"}</Text>
-              <Detail label="Manufacturer" value={searchResult?.manufacturer_name} />
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
+                {searchResult?.name || "N/A"}
+              </Text>
+              <Detail
+                label="Manufacturer"
+                value={searchResult?.manufacturer_name}
+              />
               <Detail label="Price" value={`₹${searchResult?.price}`} />
               <Detail label="Type" value={searchResult?.type} />
               <Detail label="Packaging" value={searchResult?.pack_size_label} />
-              <Detail label="Composition 1" value={searchResult?.short_composition1} />
-              <Detail label="Composition 2" value={searchResult?.short_composition2} />
-              <Detail label="Side Effects" value={searchResult?.Consolidated_Side_Effects} />
+              <Detail
+                label="Composition 1"
+                value={searchResult?.short_composition1}
+              />
+              <Detail
+                label="Composition 2"
+                value={searchResult?.short_composition2}
+              />
+              <Detail
+                label="Side Effects"
+                value={searchResult?.Consolidated_Side_Effects}
+              />
               <Detail label="Use" value={searchResult?.use0} />
-              <Detail label="Chemical Class" value={searchResult?.["Chemical Class"]} />
-              <Detail label="Habit Forming" value={searchResult?.["Habit Forming"]} />
-              <Detail label="Therapeutic Class" value={searchResult?.["Therapeutic Class"]} />
-              <Detail label="Action Class" value={searchResult?.["Action Class"]} />
+              <Detail
+                label="Chemical Class"
+                value={searchResult?.["Chemical Class"]}
+              />
+              <Detail
+                label="Habit Forming"
+                value={searchResult?.["Habit Forming"]}
+              />
+              <Detail
+                label="Therapeutic Class"
+                value={searchResult?.["Therapeutic Class"]}
+              />
+              <Detail
+                label="Action Class"
+                value={searchResult?.["Action Class"]}
+              />
             </ScrollView>
-            <TouchableOpacity style={[styles.closeButton, { backgroundColor: colors.button }]} onPress={() => setModalVisible(false)}>
+            <TouchableOpacity
+              style={[styles.closeButton, { backgroundColor: colors.button }]}
+              onPress={() => setModalVisible(false)}
+            >
               <Text style={styles.closeText}>Close</Text>
             </TouchableOpacity>
           </View>
@@ -242,17 +359,39 @@ export default function Med() {
 function MedicineCard({ data, onLongPress, colors, isPrimary = false }) {
   if (!data) return null;
   return (
-    <View style={[styles.resultBox, { backgroundColor: colors.card, marginBottom: 12 }]}>
-      <TouchableOpacity onLongPress={() => { if (onLongPress) onLongPress(); }}>
+    <View
+      style={[
+        styles.resultBox,
+        { backgroundColor: colors.card, marginBottom: 12 },
+      ]}
+    >
+      <TouchableOpacity
+        onLongPress={() => {
+          if (onLongPress) onLongPress();
+        }}
+      >
         <View style={styles.resultHeader}>
-          <Text style={[styles.resultTitle, { color: colors.text }]} numberOfLines={2} ellipsizeMode="tail">{data.name || "N/A"}</Text>
-          <Text style={[styles.price, { color: colors.price }]}>₹ {data.price || "N/A"}</Text>
+          <Text
+            style={[styles.resultTitle, { color: colors.text }]}
+            numberOfLines={2}
+            ellipsizeMode="tail"
+          >
+            {data.name || "N/A"}
+          </Text>
+          <Text style={[styles.price, { color: colors.price }]}>
+            ₹ {data.price || "N/A"}
+          </Text>
         </View>
-        <Text numberOfLines={1} style={{ marginTop: 4 }}>Manufacturer: {data.manufacturer_name}</Text>
-        <Text numberOfLines={2} style={{ marginTop: 2 }}>
-          Components: {data.short_composition1} {data.short_composition2 ? `, ${data.short_composition2}` : ""}
+        <Text numberOfLines={1} style={{ marginTop: 4 }}>
+          Manufacturer: {data.manufacturer_name}
         </Text>
-        <Text style={{ fontSize: 12, marginTop: 4, color: colors.label }}>(Long press for details)</Text>
+        <Text numberOfLines={2} style={{ marginTop: 2 }}>
+          Components: {data.short_composition1}{" "}
+          {data.short_composition2 ? `, ${data.short_composition2}` : ""}
+        </Text>
+        <Text style={{ fontSize: 12, marginTop: 4, color: colors.label }}>
+          (Long press for details)
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -307,12 +446,28 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(0,0,0,0.1)",
   },
-  resultHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 },
-  resultTitle: { flex: 1, flexShrink: 1, fontSize: 18, fontWeight: "700", marginRight: 10 },
+  resultHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 6,
+  },
+  resultTitle: {
+    flex: 1,
+    flexShrink: 1,
+    fontSize: 18,
+    fontWeight: "700",
+    marginRight: 10,
+  },
   price: { minWidth: 70, textAlign: "right", fontSize: 16, fontWeight: "600" },
   modalBackground: { flex: 1, justifyContent: "center", alignItems: "center" },
   modalCard: { padding: 20, borderRadius: 16, width: "90%", maxHeight: "85%" },
   modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12 },
-  closeButton: { marginTop: 16, paddingVertical: 12, borderRadius: 14, alignItems: "center" },
+  closeButton: {
+    marginTop: 16,
+    paddingVertical: 12,
+    borderRadius: 14,
+    alignItems: "center",
+  },
   closeText: { color: "#fff", fontWeight: "600" },
 });
