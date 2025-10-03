@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -15,7 +15,6 @@ import {
 import DateTimePicker from "@react-native-community/datetimepicker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
-// import { first_name } from "./profile"; // profile.js should export: export const first_name = "John";
 
 const STORAGE_KEY = "@reminders_v1";
 const PRESET_TIMES = {
@@ -24,17 +23,14 @@ const PRESET_TIMES = {
   dinner: { hour: 20, minute: 0 },
 };
 
-// Helper: compute Date with offset, auto move to next day if past
+// Compute notification date
 function computeNotificationDate(baseDate, hour, minute, offsetMinutes = 0) {
   const d = baseDate ? new Date(baseDate) : new Date();
   d.setHours(hour);
   d.setMinutes(minute + offsetMinutes);
   d.setSeconds(0);
   d.setMilliseconds(0);
-
-  // If computed time is in the past today, move to tomorrow
   if (d < new Date()) d.setDate(d.getDate() + 1);
-
   return d;
 }
 
@@ -42,21 +38,21 @@ export default function Reminder({ name }) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
 
-  const first_name = name || "John"; // Default name if not imported
+  const first_name = name || "John";
 
   const [medicine, setMedicine] = useState("");
-  const [timeMode, setTimeMode] = useState("breakfast"); // breakfast|lunch|dinner|custom
+  const [timeMode, setTimeMode] = useState("breakfast");
   const [customTime, setCustomTime] = useState(new Date());
   const [showTimePicker, setShowTimePicker] = useState(false);
-  const [beforeAfter, setBeforeAfter] = useState("before"); // before|after
-  const [offset, setOffset] = useState(15); // 15 or 30 mins
+  const [beforeAfter, setBeforeAfter] = useState("before");
+  const [offset, setOffset] = useState(15);
   const [endDate, setEndDate] = useState(null);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [reminders, setReminders] = useState([]);
 
+  // Load reminders and request notification permissions
   useEffect(() => {
     (async () => {
-      // Request notification permissions
       const { status } = await Notifications.requestPermissionsAsync();
       if (status !== "granted") {
         Alert.alert(
@@ -64,14 +60,6 @@ export default function Reminder({ name }) {
           "Enable notifications to get reminders."
         );
       }
-
-      // Load saved reminders
-      await loadReminders();
-
-      // Schedule notifications for all saved reminders
-      await scheduleAllReminders();
-
-      // Configure notification handler
       Notifications.setNotificationHandler({
         handleNotification: async () => ({
           shouldShowAlert: true,
@@ -79,59 +67,50 @@ export default function Reminder({ name }) {
           shouldSetBadge: false,
         }),
       });
+      await loadReminders();
+      await scheduleAllReminders();
     })();
   }, [scheduleAllReminders]);
 
-  // Load reminders
   async function loadReminders() {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
     if (raw) {
       let list = JSON.parse(raw);
-
-      // Reset statuses for past reminders
       const now = new Date();
       list = list.map((r) => {
         const d = new Date(r.date);
         if (d < now) {
           if (r.repeat) {
-            // For repeating reminders -> move to next day, reset status
             d.setDate(d.getDate() + 1);
             return { ...r, date: d.toISOString(), status: "pending" };
           } else {
-            // One-time -> just reset status to pending
             return { ...r, status: "pending" };
           }
         }
         return r;
       });
-
       setReminders(list);
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(list));
     }
   }
 
-  // Save reminders
   async function saveReminders(list) {
     setReminders(list);
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(list));
   }
 
-  // Schedule notification for a single reminder
   async function scheduleNotification(reminder) {
     const notifDate = new Date(reminder.date);
     const end = reminder.endDate ? new Date(reminder.endDate) : null;
     let notificationIds = [];
 
     if (end) {
-      // Schedule daily until end date
       let d = new Date(notifDate);
       while (d <= end) {
         const id = await Notifications.scheduleNotificationAsync({
           content: {
-            title: `💊 Reminder`,
-            body: `Take ${reminder.medicine} (${
-              reminder.beforeAfter
-            } food) at ${d.toLocaleTimeString([], {
+            title: "💊 Reminder",
+            body: `Take ${reminder.medicine} (${reminder.beforeAfter} food) at ${d.toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",
             })}`,
@@ -143,13 +122,10 @@ export default function Reminder({ name }) {
         d.setDate(d.getDate() + 1);
       }
     } else {
-      // Daily repeating reminder
       const id = await Notifications.scheduleNotificationAsync({
         content: {
-          title: `💊 Reminder`,
-          body: `Take ${reminder.medicine} (${
-            reminder.beforeAfter
-          } food) at ${notifDate.toLocaleTimeString([], {
+          title: "💊 Reminder",
+          body: `Take ${reminder.medicine} (${reminder.beforeAfter} food) at ${notifDate.toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
           })}`,
@@ -167,33 +143,27 @@ export default function Reminder({ name }) {
     return notificationIds;
   }
 
-  // Schedule all reminders on app launch
-  const scheduleAllReminders = React.useCallback(async () => {
+  const scheduleAllReminders = useCallback(async () => {
     if (!reminders || reminders.length === 0) return;
-
     const now = new Date();
     let updated = [];
 
     for (let reminder of reminders) {
       const d = new Date(reminder.date);
-
-      // Reset if time already passed
       if (d < now && reminder.repeat) {
         d.setDate(d.getDate() + 1);
         reminder.date = d.toISOString();
         reminder.status = "pending";
       } else if (d < now && !reminder.repeat) {
-        reminder.status = "pending"; // one-time stays in history
+        reminder.status = "pending";
       }
 
-      // Cancel old notifications
       if (reminder.notificationIds) {
         for (let id of reminder.notificationIds) {
           await Notifications.cancelScheduledNotificationAsync(id);
         }
       }
 
-      // Schedule again
       const notificationIds = await scheduleNotification(reminder);
       reminder.notificationIds = notificationIds;
       updated.push(reminder);
@@ -202,7 +172,6 @@ export default function Reminder({ name }) {
     await saveReminders(updated);
   }, [reminders]);
 
-  // Add reminder
   async function addReminder() {
     if (!medicine.trim()) {
       Alert.alert("Missing field", "Please enter a medicine name.");
@@ -220,13 +189,7 @@ export default function Reminder({ name }) {
     }
 
     const offsetMinutes = (beforeAfter === "before" ? -1 : 1) * offset;
-    const baseDate = new Date();
-    const notifDate = computeNotificationDate(
-      baseDate,
-      hour,
-      minute,
-      offsetMinutes
-    );
+    const notifDate = computeNotificationDate(new Date(), hour, minute, offsetMinutes);
 
     const id = Date.now().toString();
     const reminder = {
@@ -247,14 +210,12 @@ export default function Reminder({ name }) {
 
     await saveReminders([reminder, ...reminders]);
 
-    // Reset form
     setMedicine("");
     setTimeMode("breakfast");
     setCustomTime(new Date());
     setEndDate(null);
   }
 
-  // Delete reminder
   async function deleteReminder(remId) {
     const r = reminders.find((x) => x.id === remId);
     if (r?.notificationIds) {
@@ -265,7 +226,6 @@ export default function Reminder({ name }) {
     await saveReminders(reminders.filter((x) => x.id !== remId));
   }
 
-  // Mark status
   async function markStatus(remId, status) {
     await saveReminders(
       reminders.map((r) => (r.id === remId ? { ...r, status } : r))
@@ -302,118 +262,61 @@ export default function Reminder({ name }) {
           <TextInput
             placeholder="Medicine name"
             placeholderTextColor={colors.chipText}
-            style={[
-              styles.input,
-              {
-                backgroundColor: colors.input,
-                borderColor: colors.border,
-                color: colors.text,
-              },
-            ]}
+            style={[styles.input, { backgroundColor: colors.input, borderColor: colors.border, color: colors.text }]}
             value={medicine}
             onChangeText={setMedicine}
           />
 
-          <Text style={[styles.label, { color: colors.text }]}>
-            Select Time
-          </Text>
+          {/* Time selection */}
+          <Text style={[styles.label, { color: colors.text }]}>Select Time</Text>
           <View style={styles.row}>
             {["breakfast", "lunch", "dinner", "custom"].map((m) => (
               <Pressable
                 key={m}
-                style={[
-                  styles.chip,
-                  {
-                    backgroundColor:
-                      timeMode === m ? colors.chipActive : colors.input,
-                    borderColor: colors.border,
-                  },
-                ]}
-                onPress={() => {
-                  setTimeMode(m);
-                  if (m === "custom") setShowTimePicker(true);
-                }}
+                style={[styles.chip, { backgroundColor: timeMode === m ? colors.chipActive : colors.input, borderColor: colors.border }]}
+                onPress={() => { setTimeMode(m); if (m === "custom") setShowTimePicker(true); }}
               >
-                <Text
-                  style={{ color: timeMode === m ? "#fff" : colors.chipText }}
-                >
-                  {m}
-                </Text>
+                <Text style={{ color: timeMode === m ? "#fff" : colors.chipText }}>{m}</Text>
               </Pressable>
             ))}
           </View>
-
           {timeMode === "custom" && showTimePicker && (
             <DateTimePicker
               value={customTime}
               mode="time"
               is24Hour
               display={Platform.OS === "ios" ? "spinner" : "default"}
-              onChange={(e, date) => {
-                setShowTimePicker(false);
-                if (date) setCustomTime(date);
-              }}
+              onChange={(e, date) => { setShowTimePicker(false); if (date) setCustomTime(date); }}
             />
           )}
 
-          <Text style={[styles.label, { color: colors.text }]}>
-            Before / After Food
-          </Text>
+          {/* Before / After Food */}
+          <Text style={[styles.label, { color: colors.text }]}>Before / After Food</Text>
           <View style={styles.row}>
             {["before", "after"].map((opt) => (
               <Pressable
                 key={opt}
-                style={[
-                  styles.chip,
-                  {
-                    backgroundColor:
-                      beforeAfter === opt ? colors.chipActive : colors.input,
-                    borderColor: colors.border,
-                  },
-                ]}
+                style={[styles.chip, { backgroundColor: beforeAfter === opt ? colors.chipActive : colors.input, borderColor: colors.border }]}
                 onPress={() => setBeforeAfter(opt)}
               >
-                <Text
-                  style={{
-                    color: beforeAfter === opt ? "#fff" : colors.chipText,
-                  }}
-                >
-                  {opt}
-                </Text>
+                <Text style={{ color: beforeAfter === opt ? "#fff" : colors.chipText }}>{opt}</Text>
               </Pressable>
             ))}
             {[15, 30].map((m) => (
               <Pressable
                 key={m}
-                style={[
-                  styles.chip,
-                  {
-                    backgroundColor:
-                      offset === m ? colors.chipActive : colors.input,
-                    borderColor: colors.border,
-                  },
-                ]}
+                style={[styles.chip, { backgroundColor: offset === m ? colors.chipActive : colors.input, borderColor: colors.border }]}
                 onPress={() => setOffset(m)}
               >
-                <Text
-                  style={{ color: offset === m ? "#fff" : colors.chipText }}
-                >
-                  {m} min
-                </Text>
+                <Text style={{ color: offset === m ? "#fff" : colors.chipText }}>{m} min</Text>
               </Pressable>
             ))}
           </View>
 
-          <Text style={[styles.label, { color: colors.text }]}>
-            End Date (optional)
-          </Text>
-          <Pressable
-            style={[styles.timeBtn, { borderColor: colors.border }]}
-            onPress={() => setShowEndDatePicker(true)}
-          >
-            <Text style={{ color: colors.text }}>
-              {endDate ? endDate.toLocaleDateString() : "Select End Date"}
-            </Text>
+          {/* End Date */}
+          <Text style={[styles.label, { color: colors.text }]}>End Date (optional)</Text>
+          <Pressable style={[styles.timeBtn, { borderColor: colors.border }]} onPress={() => setShowEndDatePicker(true)}>
+            <Text style={{ color: colors.text }}>{endDate ? endDate.toLocaleDateString() : "Select End Date"}</Text>
           </Pressable>
           {showEndDatePicker && (
             <DateTimePicker
@@ -421,90 +324,39 @@ export default function Reminder({ name }) {
               mode="date"
               display={Platform.OS === "ios" ? "spinner" : "default"}
               minimumDate={new Date()}
-              onChange={(e, date) => {
-                setShowEndDatePicker(false);
-                if (date) setEndDate(date);
-              }}
+              onChange={(e, date) => { setShowEndDatePicker(false); if (date) setEndDate(date); }}
             />
           )}
 
-          <Pressable
-            style={[styles.saveBtn, { backgroundColor: colors.chipActive }]}
-            onPress={addReminder}
-          >
-            <Text style={{ color: "#fff", fontWeight: "600" }}>
-              Save Reminder
-            </Text>
+          <Pressable style={[styles.saveBtn, { backgroundColor: colors.chipActive }]} onPress={addReminder}>
+            <Text style={{ color: "#fff", fontWeight: "600" }}>Save Reminder</Text>
           </Pressable>
         </View>
 
         {/* List */}
-        <Text style={[styles.sectionHeader, { color: colors.text }]}>
-          Your Reminders
-        </Text>
+        <Text style={[styles.sectionHeader, { color: colors.text }]}>Your Reminders</Text>
         <FlatList
           data={Array.isArray(reminders) ? reminders : []}
           keyExtractor={(item) => item?.id ?? Math.random().toString()}
-          ListEmptyComponent={
-            <Text style={{ color: colors.text }}>No reminders yet.</Text>
-          }
+          ListEmptyComponent={<Text style={{ color: colors.text }}>No reminders yet.</Text>}
           renderItem={({ item }) => {
             if (!item) return null;
             return (
-              <View
-                style={[
-                  styles.reminderRow,
-                  { backgroundColor: colors.card, borderColor: colors.border },
-                ]}
-              >
-                {/* Delete button on left */}
-                <Pressable
-                  style={[
-                    styles.smallBtn,
-                    { backgroundColor: "#fee2e2", marginRight: 8 },
-                  ]}
-                  onPress={() => deleteReminder(item.id)}
-                >
+              <View style={[styles.reminderRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Pressable style={[styles.smallBtn, { backgroundColor: "#fee2e2", marginRight: 8 }]} onPress={() => deleteReminder(item.id)}>
                   <Text>🗑️</Text>
                 </Pressable>
-
-                {/* Reminder info */}
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.reminderTitle, { color: colors.text }]}>
-                    {item.medicine ?? "Unknown"}
-                  </Text>
-                  <Text style={[styles.reminderMeta, { color: colors.text }]}>
-                    {item.repeat ? "Daily" : "One-time"} •{" "}
-                    {item.date ? new Date(item.date).toLocaleString() : "N/A"}
-                  </Text>
-                  {item.endDate && (
-                    <Text style={[styles.reminderMeta, { color: colors.text }]}>
-                      Ends: {new Date(item.endDate).toLocaleDateString()}
-                    </Text>
-                  )}
-                  <Text style={[styles.reminderMeta, { color: colors.text }]}>
-                    Status: {item.status ?? "pending"}
-                  </Text>
+                  <Text style={[styles.reminderTitle, { color: colors.text }]}>{item.medicine ?? "Unknown"}</Text>
+                  <Text style={[styles.reminderMeta, { color: colors.text }]}>{item.repeat ? "Daily" : "One-time"} • {item.date ? new Date(item.date).toLocaleString() : "N/A"}</Text>
+                  {item.endDate && <Text style={[styles.reminderMeta, { color: colors.text }]}>Ends: {new Date(item.endDate).toLocaleDateString()}</Text>}
+                  <Text style={[styles.reminderMeta, { color: colors.text }]}>Status: {item.status ?? "pending"}</Text>
                 </View>
-
-                {/* Right buttons */}
                 <View style={styles.rightButtons}>
-                  <Pressable
-                    style={[
-                      styles.smallBtn,
-                      { backgroundColor: colors.smallBtnBg },
-                    ]}
-                    onPress={() => markStatus(item.id, "taken")}
-                  >
+                  <Pressable style={[styles.smallBtn, { backgroundColor: colors.smallBtnBg }]} onPress={() => markStatus(item.id, "taken")}>
                     <Text>✅</Text>
                   </Pressable>
-                  <Pressable
-                    style={[
-                      styles.smallBtn,
-                      { backgroundColor: colors.smallBtnBg },
-                    ]}
-                    onPress={() => markStatus(item.id, "missed")}
-                  >
+                  <Pressable style={[styles.smallBtn, { backgroundColor: colors.smallBtnBg }]} onPress={() => markStatus(item.id, "missed")}>
                     <Text>❌</Text>
                   </Pressable>
                 </View>
@@ -518,47 +370,16 @@ export default function Reminder({ name }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
- 
-   header: {
-    fontSize: 20,
-    fontWeight: "700",
-    textAlign: "left",
-    marginTop: 20,
-    paddingBottom: 12,
-    paddingHorizontal: 0,
-  },
-  card: {
-    padding: 16,
-    borderRadius: 20,
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 8,
-    elevation: 3,
-  },
+  header: { fontSize: 20, fontWeight: "700", textAlign: "left", marginTop: 20, paddingBottom: 12 },
+  card: { padding: 16, borderRadius: 20, marginBottom: 20, shadowColor: "#000", shadowOpacity: 0.05, shadowOffset: { width: 0, height: 4 }, shadowRadius: 8, elevation: 3 },
   input: { borderWidth: 1, padding: 10, borderRadius: 12, marginBottom: 10 },
   label: { fontWeight: "600", marginTop: 10, marginBottom: 4 },
   row: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  chip: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    borderWidth: 1,
-    margin: 4,
-  },
+  chip: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1, margin: 4 },
   timeBtn: { marginTop: 8, padding: 10, borderWidth: 1, borderRadius: 12 },
   saveBtn: { marginTop: 14, padding: 12, borderRadius: 14, alignItems: "center" },
   sectionHeader: { fontWeight: "700", marginBottom: 6 },
-  reminderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-    borderRadius: 16,
-    marginVertical: 6,
-    borderWidth: 1,
-  },
+  reminderRow: { flexDirection: "row", alignItems: "center", padding: 12, borderRadius: 16, marginVertical: 6, borderWidth: 1 },
   reminderTitle: { fontWeight: "700" },
   reminderMeta: { fontSize: 12 },
   smallBtn: { padding: 6, borderRadius: 8, marginVertical: 2, alignItems: "center" },
