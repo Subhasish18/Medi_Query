@@ -10,10 +10,10 @@ import {
   Platform,
   TouchableOpacity,
   Linking,
+  KeyboardAvoidingView,
 } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import * as Location from "expo-location";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { useFocusEffect } from "@react-navigation/native";
 import { IconSymbol } from "@/components/ui/icon-symbol";
@@ -191,7 +191,7 @@ out center;`;
 
   if (!region) {
     return (
-      <SafeAreaView
+      <View
         style={[styles.center, isDark ? styles.darkBg : styles.lightBg]}
         edges={["top", "left", "right"]}
       >
@@ -200,16 +200,19 @@ out center;`;
         <Text style={{ marginTop: 8, color: isDark ? "#fff" : "#333" }}>
           Fetching your location...
         </Text>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView
+    <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+        >
+    <View
       style={[styles.container, isDark ? styles.darkBg : styles.lightBg]}
-      edges={["top", "left", "right", "bottom"]}
     >
-      <StatusBar style={isDark ? "light" : "dark"} />
       <Text
         style={[styles.header, isDark ? styles.headerDark : styles.headerLight]}
       >
@@ -264,12 +267,14 @@ out center;`;
           </TouchableOpacity>
         )}
       </View>
-    </SafeAreaView>
+    </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flexGrow: 1, padding: 16, paddingBottom: 8 },
+  header: { fontSize: 20, fontWeight: "700", textAlign: "left", marginTop: 20, paddingBottom: 12 },
   innerContainer: { flex: 1, paddingHorizontal: 8, paddingBottom: 8 },
   map: { flex: 1, borderRadius: 12, overflow: "hidden" },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
@@ -297,14 +302,6 @@ const styles = StyleSheet.create({
   fabText: { color: "#fff", fontWeight: "bold" },
   darkBg: { backgroundColor: "#121212" },
   lightBg: { backgroundColor: "#F0FDF4" },
-  header: {
-    fontSize: 20,
-    fontWeight: "700",
-    textAlign: "left",
-    marginTop: 5,
-    paddingBottom: 10,
-    paddingHorizontal: 16,
-  },
   headerLight: {
     color: "#1F2937", // dark gray for light mode
   },

@@ -10,6 +10,8 @@ import {
   Modal,
   ActivityIndicator,
   useColorScheme,
+  KeyboardAvoidingView,
+  Platform,
   Animated,
   Easing,
   ScrollView,
@@ -251,108 +253,119 @@ export default function Med() {
           <Text style={styles.buttonText}>Search</Text>
         )}
       </TouchableOpacity>
+      <ScrollView
+        style={{ maxHeight: "72%", padding: 6, borderRadius: 18 }}
+        contentContainerStyle={{ paddingBottom: 16 }}
+      >
+        {searchResult && (
+          <MedicineCard
+            data={searchResult}
+            colors={colors}
+            isPrimary={true}
+            onLongPress={() => setModalVisible(true)}
+          />
+        )}
 
-      {searchResult && (
-        <MedicineCard
-          data={searchResult}
-          colors={colors}
-          isPrimary={true}
-          onLongPress={() => setModalVisible(true)}
-        />
-      )}
+        {similarMeds.length > 0 && (
+          <View style={{ marginTop: 16 }}>
+            <Text
+              style={[styles.label, { color: colors.text, fontWeight: "700" }]}
+            >
+              Suggested:
+            </Text>
 
-      {similarMeds.length > 0 && (
-        <View style={{ marginTop: 16 }}>
-          <Text
-            style={[styles.label, { color: colors.text, fontWeight: "700" }]}
-          >
-            Suggested:
-          </Text>
-          {similarMeds.map((med, idx) => (
-            <MedicineCard
-              key={med._id || idx}
-              data={med}
-              colors={colors}
-              onLongPress={() => setModalVisible(true)}
-            />
-          ))}
-        </View>
-      )}
+            {similarMeds.map((med, idx) => (
+              <MedicineCard
+                key={med._id || idx}
+                data={med}
+                colors={colors}
+                onLongPress={() => setModalVisible(true)}
+              />
+            ))}
+          </View>
+        )}
+      </ScrollView>
     </View>
   );
 
   return (
-    <ScrollView
-      contentContainerStyle={{
-        flexGrow: 1,
-        padding: 16,
-        backgroundColor: colors.background,
-      }}
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
     >
-      {renderHeader()}
+      <View Style={[styles.container]} keyboardShouldPersistTaps="handled">
+        {renderHeader()}
 
-      {/* Modal */}
-      <Modal
-        visible={modalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View
-          style={[styles.modalBackground, { backgroundColor: colors.overlay }]}
+        {/* Modal */}
+        <Modal
+          visible={modalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setModalVisible(false)}
         >
-          <View style={[styles.modalCard, { backgroundColor: colors.card }]}>
-            <ScrollView contentContainerStyle={{ paddingBottom: 16 }}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>
-                {searchResult?.name || "N/A"}
-              </Text>
-              <Detail
-                label="Manufacturer"
-                value={searchResult?.manufacturer_name}
-              />
-              <Detail label="Price" value={`₹${searchResult?.price}`} />
-              <Detail label="Type" value={searchResult?.type} />
-              <Detail label="Packaging" value={searchResult?.pack_size_label} />
-              <Detail
-                label="Composition 1"
-                value={searchResult?.short_composition1}
-              />
-              <Detail
-                label="Composition 2"
-                value={searchResult?.short_composition2}
-              />
-              <Detail
-                label="Side Effects"
-                value={searchResult?.Consolidated_Side_Effects}
-              />
-              <Detail label="Use" value={searchResult?.use0} />
-              <Detail
-                label="Chemical Class"
-                value={searchResult?.["Chemical Class"]}
-              />
-              <Detail
-                label="Habit Forming"
-                value={searchResult?.["Habit Forming"]}
-              />
-              <Detail
-                label="Therapeutic Class"
-                value={searchResult?.["Therapeutic Class"]}
-              />
-              <Detail
-                label="Action Class"
-                value={searchResult?.["Action Class"]}
-              />
-            </ScrollView>
-            <TouchableOpacity
-              style={[styles.closeButton, { backgroundColor: colors.button }]}
-              onPress={() => setModalVisible(false)}
-            >
-              <Text style={styles.closeText}>Close</Text>
-            </TouchableOpacity>
+          <View
+            style={[
+              styles.modalBackground,
+              { backgroundColor: colors.overlay },
+            ]}
+          >
+            <View style={[styles.modalCard, { backgroundColor: colors.card }]}>
+              <ScrollView contentContainerStyle={{ paddingBottom: 16 }}>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>
+                  {searchResult?.name || "N/A"}
+                </Text>
+                <Detail
+                  label="Manufacturer"
+                  value={searchResult?.manufacturer_name}
+                />
+                <Detail label="Price" value={`₹${searchResult?.price}`} />
+                <Detail label="Type" value={searchResult?.type} />
+                <Detail
+                  label="Packaging"
+                  value={searchResult?.pack_size_label}
+                />
+                <Detail
+                  label="Composition 1"
+                  value={searchResult?.short_composition1}
+                />
+                <Detail
+                  label="Composition 2"
+                  value={searchResult?.short_composition2}
+                />
+                <Detail
+                  label="Side Effects"
+                  value={searchResult?.Consolidated_Side_Effects}
+                />
+                <Detail label="Use" value={searchResult?.use0} />
+                <Detail
+                  label="Chemical Class"
+                  value={searchResult?.["Chemical Class"]}
+                />
+                <Detail
+                  label="Habit Forming"
+                  value={searchResult?.["Habit Forming"]}
+                />
+                <Detail
+                  label="Therapeutic Class"
+                  value={searchResult?.["Therapeutic Class"]}
+                />
+                <Detail
+                  label="Action Class"
+                  value={searchResult?.["Action Class"]}
+                />
+              </ScrollView>
+              <TouchableOpacity
+                style={[styles.closeButton, { backgroundColor: colors.button }]}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={styles.closeText}>Close</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </Modal>
-    </ScrollView>
+        </Modal>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -408,6 +421,7 @@ function Detail({ label, value }) {
 }
 
 const styles = StyleSheet.create({
+  container: { flexGrow: 1, padding: 16 },
   title: { fontSize: 22, fontWeight: "700", marginBottom: 12 },
   label: { fontSize: 16, fontWeight: "500", marginBottom: 8 },
   input: {
