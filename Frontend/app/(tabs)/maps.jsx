@@ -1,5 +1,5 @@
 // src/screens/Maps.jsx
-import React, { useState, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,32 +10,19 @@ import {
   Platform,
   TouchableOpacity,
   Linking,
-  KeyboardAvoidingView,
 } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import * as Location from "expo-location";
 import { StatusBar } from "expo-status-bar";
-import { useFocusEffect } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 
 const DARK_MAP_STYLE = [
   { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
   { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
   { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
-  {
-    featureType: "poi",
-    elementType: "labels.text.fill",
-    stylers: [{ color: "#d59563" }],
-  },
-  {
-    featureType: "road",
-    elementType: "geometry",
-    stylers: [{ color: "#38414e" }],
-  },
-  {
-    featureType: "water",
-    elementType: "geometry",
-    stylers: [{ color: "#17263c" }],
-  },
+  { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] },
 ];
 
 export default function Maps() {
@@ -44,11 +31,11 @@ export default function Maps() {
 
   const [region, setRegion] = useState(null);
   const [places, setPlaces] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState(null);
 
   const radius = 5000; // 5 km
-  const MAX_RESULTS = 100; // 🟢 Limit Overpass results
+  const MAX_RESULTS = 100;
 
   const buildOverpassQuery = (lat, lon, r) => {
     const clauses = [
@@ -56,23 +43,16 @@ export default function Maps() {
       'way["amenity"="pharmacy"]',
       'node["shop"="chemist"]',
       'way["shop"="chemist"]',
-      'node["shop"="pharmacy"]',
-      'way["shop"="pharmacy"]',
       'node["shop"="drugstore"]',
       'way["shop"="drugstore"]',
-      'node["shop"="medical"]',
-      'way["shop"="medical"]',
       'node["healthcare"="pharmacy"]',
       'way["healthcare"="pharmacy"]',
-      'node["dispensing"="yes"]',
-      'way["dispensing"="yes"]',
     ];
-
     return `[out:json][timeout:25];
 (
   ${clauses.map((c) => `${c}(around:${r},${lat},${lon});`).join("\n  ")}
 );
-out center ${MAX_RESULTS};`; // 🟢 Apply Overpass limit
+out center ${MAX_RESULTS};`;
   };
 
   const fetchWithTimeout = async (url, options = {}, timeout = 10000) => {
@@ -89,7 +69,6 @@ out center ${MAX_RESULTS};`; // 🟢 Apply Overpass limit
   };
 
   const fetchPlaces = useCallback(async (lat, lon, r) => {
-    setLoading(true);
     try {
       const query = buildOverpassQuery(lat, lon, r);
       const res = await fetchWithTimeout(
@@ -98,14 +77,15 @@ out center ${MAX_RESULTS};`; // 🟢 Apply Overpass limit
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
           body: `data=${encodeURIComponent(query)}`,
-        }
+        },
+        15000
       );
 
       if (!res.ok) throw new Error(`Overpass API error: ${res.status}`);
       const json = await res.json();
 
       const elements = (json.elements || [])
-        .slice(0, MAX_RESULTS) // 🟢 Limit results on JS side too
+        .slice(0, MAX_RESULTS)
         .map((el) => {
           if (el.type === "node")
             return { id: el.id, lat: el.lat, lon: el.lon, tags: el.tags || {} };
@@ -150,6 +130,7 @@ out center ${MAX_RESULTS};`; // 🟢 Apply Overpass limit
       const loc = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
       });
+
       const { latitude, longitude } = loc.coords;
       setRegion({
         latitude,
@@ -157,6 +138,7 @@ out center ${MAX_RESULTS};`; // 🟢 Apply Overpass limit
         latitudeDelta: 0.05,
         longitudeDelta: 0.05,
       });
+
       await fetchPlaces(latitude, longitude, radius);
     } catch (err) {
       console.error("Location error:", err);
@@ -165,7 +147,9 @@ out center ${MAX_RESULTS};`; // 🟢 Apply Overpass limit
     }
   }, [fetchPlaces]);
 
-  useFocusEffect(useCallback(() => { getLocationAndFetch(); }, [getLocationAndFetch]));
+  useEffect(() => {
+    getLocationAndFetch();
+  }, []);
 
   const openInMaps = () => {
     if (!selectedPlace) return;
@@ -180,29 +164,22 @@ out center ${MAX_RESULTS};`; // 🟢 Apply Overpass limit
     );
   };
 
-  if (!region) {
-    return (
-      <View style={[styles.center, isDark ? styles.darkBg : styles.lightBg]} edges={["top","left","right"]}>
-        <StatusBar style={isDark ? "light" : "dark"} />
-        <ActivityIndicator size="large" color={isDark ? "#fff" : "#007AFF"} />
-        <Text style={{ marginTop: 8, color: isDark ? "#fff" : "#333" }}>
-          Fetching your location...
-        </Text>
-      </View>
-    );
-  }
-
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
-    >
-      <View style={[styles.container, isDark ? styles.darkBg : styles.lightBg]}>
+    <View style={[styles.container, isDark ? styles.darkBg : styles.lightBg]}>
+      <StatusBar style={isDark ? "light" : "dark"} />
+
+      {/* Header with Refresh Button */}
+      <View style={styles.headerRow}>
         <Text style={[styles.header, isDark ? styles.headerDark : styles.headerLight]}>
           Nearest Medical Shops
         </Text>
+        <TouchableOpacity onPress={getLocationAndFetch} style={styles.refreshBtn}>
+          <Ionicons name="refresh-circle" size={30} color={isDark ? "#fff" : "#0EA5A4"} />
+        </TouchableOpacity>
+      </View>
 
+      {/* Map Section */}
+      {region && (
         <View style={styles.innerContainer}>
           <MapView
             style={styles.map}
@@ -224,22 +201,12 @@ out center ${MAX_RESULTS};`; // 🟢 Apply Overpass limit
                 }
                 onPress={() => setSelectedPlace(p)}
               >
-                {/* 🟢 Safe Marker */}
-                <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: "#e11d48", justifyContent: "center", alignItems: "center" }}>
-                  <Text style={{ color: "#fff", fontWeight: "bold" }}>💊</Text>
+                <View style={styles.marker}>
+                  <Text style={styles.markerText}>💊</Text>
                 </View>
               </Marker>
             ))}
           </MapView>
-
-          {loading && (
-            <View style={styles.loadingOverlay}>
-              <ActivityIndicator size="large" color={isDark ? "#fff" : "#007AFF"} />
-              <Text style={{ marginTop: 8, color: isDark ? "#fff" : "#333" }}>
-                Loading nearby medicine shops...
-              </Text>
-            </View>
-          )}
 
           {selectedPlace && Platform.OS === "ios" && (
             <TouchableOpacity style={styles.fab} onPress={openInMaps}>
@@ -249,30 +216,67 @@ out center ${MAX_RESULTS};`; // 🟢 Apply Overpass limit
             </TouchableOpacity>
           )}
         </View>
-      </View>
-    </KeyboardAvoidingView>
+      )}
+
+      {/* Single unified loader */}
+      {loading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={isDark ? "#fff" : "#007AFF"} />
+          <Text style={{ marginTop: 8, color: isDark ? "#fff" : "#333" }}>
+            Loading nearby medicine shops...
+          </Text>
+        </View>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, padding: 16, paddingBottom: 8 },
-  header: { fontSize: 20, fontWeight: "700", textAlign: "left", marginTop: 20, paddingBottom: 12 },
-  innerContainer: { flex: 1, paddingHorizontal: 8, paddingBottom: 8 },
-  map: { flex: 1, borderRadius: 12, overflow: "hidden" },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
+  container: { flex: 1, padding: 16 },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 16,
+    marginBottom: 12,
+  },
+  header: { fontSize: 22, fontWeight: "700" },
+  innerContainer: { flex: 1, borderRadius: 12, overflow: "hidden" },
+  map: { flex: 1 },
   loadingOverlay: {
-    position: "absolute", left: 0, right: 0, top: 0, bottom: 0,
-    justifyContent: "center", alignItems: "center",
-    zIndex: 20, backgroundColor: "rgba(0,0,0,0.25)",
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.25)",
+    zIndex: 20,
   },
   fab: {
-    position: "absolute", bottom: 20, right: 20,
-    backgroundColor: "#2563EB", paddingVertical: 12, paddingHorizontal: 18,
-    borderRadius: 30, elevation: 4,
+    position: "absolute",
+    bottom: 20,
+    right: 20,
+    backgroundColor: "#2563EB",
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    borderRadius: 30,
+    elevation: 4,
   },
   fabText: { color: "#fff", fontWeight: "bold" },
+  marker: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#e11d48",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  markerText: { color: "#fff", fontWeight: "bold" },
   darkBg: { backgroundColor: "#121212" },
   lightBg: { backgroundColor: "#F0FDF4" },
   headerLight: { color: "#1F2937" },
   headerDark: { color: "#F3F4F6" },
+  refreshBtn: { marginRight: 4 },
 });
