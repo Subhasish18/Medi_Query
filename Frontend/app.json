@@ -3,30 +3,35 @@
     "name": "MediQuery",
     "slug": "mediquery",
     "version": "1.0.0",
-    "scheme": "mediquery",
-    "userInterfaceStyle": "automatic",
     "orientation": "portrait",
     "icon": "./assets/images/ios-icon.png",
+    "scheme": "mediquery",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
     "notification": {
       "icon": "./assets/images/ios-icon.png",
       "color": "#0EA5A4",
       "iosDisplayInForeground": true
     },
     "ios": {
-      "bundleIdentifier": "com.surath83.mediquery",
       "supportsTablet": true,
+      "bundleIdentifier": "com.surath83.mediquery",
       "googleServicesFile": "./GoogleService-Info.plist",
+      "icon": "./assets/images/ios-icon.png",
       "jsEngine": "hermes",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "We need your location to show nearby pharmacies."
       }
     },
     "android": {
-      "package": "com.surath83.mediquery",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/android-icon.png",
-        "backgroundColor": "#FFFFFF"
+        "backgroundColor": "#FFFFFF",
+        "foregroundImage": "./assets/images/android-icon.png"
       },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "package": "com.surath83.mediquery",
+      "googleServicesFile": "./google-services.json",
       "jsEngine": "hermes"
     },
     "web": {
@@ -34,6 +39,7 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      "expo-dev-client",
       "expo-router",
       [
         "expo-splash-screen",
@@ -55,9 +61,8 @@
             "useFrameworks": "static"
           },
           "android": {
-            "compileSdkVersion": 35,
-            "targetSdkVersion": 35,
-            "minSdkVersion": 24
+            "compileSdkVersion": 34,
+            "targetSdkVersion": 34
           }
         }
       ],
