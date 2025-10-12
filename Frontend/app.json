@@ -8,11 +8,13 @@
     "scheme": "mediquery",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+
     "notification": {
       "icon": "./assets/images/ios-icon.png",
       "color": "#0EA5A4",
       "iosDisplayInForeground": true
     },
+
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.surath83.mediquery",
@@ -23,6 +25,7 @@
         "NSLocationWhenInUseUsageDescription": "We need your location to show nearby pharmacies."
       }
     },
+
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
@@ -34,10 +37,12 @@
       "googleServicesFile": "./google-services.json",
       "jsEngine": "hermes"
     },
+
     "web": {
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
+
     "plugins": [
       "expo-router",
       [
@@ -60,24 +65,28 @@
             "useFrameworks": "static"
           },
           "android": {
-            "compileSdkVersion": 34,
-            "targetSdkVersion": 34
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "minSdkVersion": 23
           }
         }
       ],
       "@react-native-firebase/app",
       "@react-native-firebase/auth"
     ],
+
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": false
     },
+
     "extra": {
       "router": {},
       "eas": {
         "projectId": "88b53eed-1e06-4457-9df6-b43857b72381"
       }
     },
+
     "jsEngine": "hermes"
   }
 }
