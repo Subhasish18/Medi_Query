@@ -89,7 +89,7 @@ export default function Profile({ name }) {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <View style={{ flexGrow: 1, padding: 16, paddingBottom: 60 }} >
-      <ScrollView contentContainerStyle={{ padding: 16 }}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 16 }}>
         {currentUser ? (
           <>
             <Text style={dynamicStyles.header}>{user.name}&#39;s Profile</Text>
@@ -118,8 +118,8 @@ export default function Profile({ name }) {
               Please log in to view your profile.
             </Text>
             <Pressable
-              style={[dynamicStyles.button, dynamicStyles.editButton]}
-              onPress={() => router.replace("/(auth)")}
+              style={[dynamicStyles.button, dynamicStyles.loginButton]}
+              onPress={() => router.push("/(auth)")}
             >
               <Text style={dynamicStyles.buttonText}>Login</Text>
             </Pressable>
@@ -281,6 +281,7 @@ const styles = (isDark) => {
     },
     buttonText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
     editButton: { backgroundColor: colors.buttonPrimary, alignSelf: "flex-end", minWidth: 120, maxWidth: 160 },
+    loginButton: { backgroundColor: colors.buttonPrimary, minWidth: 120, maxWidth: 160 },
     logoutButton: { backgroundColor: colors.buttonDanger, alignSelf: "center", minWidth: 120, maxWidth: 160 },
     saveButton: { backgroundColor: colors.buttonSecondary },
     cancelButton: { backgroundColor: colors.buttonDanger },

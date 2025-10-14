@@ -114,6 +114,12 @@ export default function AuthScreen() {
           {isLogin ? 'Need an account? Sign Up' : 'Have an account? Sign In'}
         </Text>
       </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => router.push('/(tabs)/profile')} style={{ marginTop: 20 }}>
+        <Text style={[styles.toggleText, { color: colors.toggleText }]}>
+          Go Back
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
