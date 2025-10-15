@@ -212,7 +212,10 @@ export default function Med() {
 
         {medicineName.length > 0 && suggestions.length > 0 && (
           <View
-            style={[styles.suggestionBox, { backgroundColor: colors.card, borderColor: colors.label }]}
+            style={[
+              styles.suggestionBox,
+              { backgroundColor: colors.card, borderColor: colors.label },
+            ]}
           >
             {loadingSuggestions ? (
               <ActivityIndicator size="small" color={colors.button} />
@@ -225,7 +228,9 @@ export default function Med() {
                     style={styles.suggestionItemWrapper}
                     onPress={() => handleSuggestionPress(item)}
                   >
-                    <Text style={[styles.suggestionItem, { color: colors.text }]}>
+                    <Text
+                      style={[styles.suggestionItem, { color: colors.text }]}
+                    >
                       {item.name}
                     </Text>
                   </TouchableOpacity>
@@ -298,24 +303,77 @@ export default function Med() {
           animationType="fade"
           onRequestClose={() => setSelectedMedicine(null)}
         >
-          <View style={[styles.modalBackground, { backgroundColor: colors.overlay }]}>
+          <View
+            style={[
+              styles.modalBackground,
+              { backgroundColor: colors.overlay },
+            ]}
+          >
             <View style={[styles.modalCard, { backgroundColor: colors.card }]}>
               <ScrollView contentContainerStyle={{ paddingBottom: 16 }}>
                 <Text style={[styles.modalTitle, { color: colors.text }]}>
                   {selectedMedicine?.name || "N/A"}
                 </Text>
-                <Detail label="Manufacturer" value={selectedMedicine?.manufacturer_name} />
-                <Detail label="Price" value={`₹${selectedMedicine?.price}`} />
-                <Detail label="Type" value={selectedMedicine?.type} />
-                <Detail label="Packaging" value={selectedMedicine?.pack_size_label} />
-                <Detail label="Composition 1" value={selectedMedicine?.short_composition1} />
-                <Detail label="Composition 2" value={selectedMedicine?.short_composition2} />
-                <Detail label="Side Effects" value={selectedMedicine?.Consolidated_Side_Effects} />
-                <Detail label="Use" value={selectedMedicine?.use0} />
-                <Detail label="Chemical Class" value={selectedMedicine?.["Chemical Class"]} />
-                <Detail label="Habit Forming" value={selectedMedicine?.["Habit Forming"]} />
-                <Detail label="Therapeutic Class" value={selectedMedicine?.["Therapeutic Class"]} />
-                <Detail label="Action Class" value={selectedMedicine?.["Action Class"]} />
+                <Detail
+                  label="Manufacturer"
+                  value={selectedMedicine?.manufacturer_name}
+                  colors={colors}
+                />
+                <Detail
+                  label="Price"
+                  value={`₹${selectedMedicine?.price}`}
+                  colors={colors}
+                />
+                <Detail
+                  label="Type"
+                  value={selectedMedicine?.type}
+                  colors={colors}
+                />
+                <Detail
+                  label="Packaging"
+                  value={selectedMedicine?.pack_size_label}
+                  colors={colors}
+                />
+                <Detail
+                  label="Composition 1"
+                  value={selectedMedicine?.short_composition1}
+                  colors={colors}
+                />
+                <Detail
+                  label="Composition 2"
+                  value={selectedMedicine?.short_composition2}
+                  colors={colors}
+                />
+                <Detail
+                  label="Side Effects"
+                  value={selectedMedicine?.Consolidated_Side_Effects}
+                  colors={colors}
+                />
+                <Detail
+                  label="Use"
+                  value={selectedMedicine?.use0}
+                  colors={colors}
+                />
+                <Detail
+                  label="Chemical Class"
+                  value={selectedMedicine?.["Chemical Class"]}
+                  colors={colors}
+                />
+                <Detail
+                  label="Habit Forming"
+                  value={selectedMedicine?.["Habit Forming"]}
+                  colors={colors}
+                />
+                <Detail
+                  label="Therapeutic Class"
+                  value={selectedMedicine?.["Therapeutic Class"]}
+                  colors={colors}
+                />
+                <Detail
+                  label="Action Class"
+                  value={selectedMedicine?.["Action Class"]}
+                  colors={colors}
+                />
               </ScrollView>
               <TouchableOpacity
                 style={[styles.closeButton, { backgroundColor: colors.button }]}
@@ -332,10 +390,15 @@ export default function Med() {
 }
 
 function MedicineCard({ data, onLongPress, colors, isPrimary = false }) {
+  const colorScheme = useColorScheme();
+  const textColor = colorScheme === "dark" ? "#c9c9c9ff" : "#7e7e7eff";
   if (!data) return null;
   return (
     <View
-      style={[styles.resultBox, { backgroundColor: colors.card, marginBottom: 12 }]}
+      style={[
+        styles.resultBox,
+        { backgroundColor: colors.card, marginBottom: 12 },
+      ]}
     >
       <TouchableOpacity
         onLongPress={() => {
@@ -343,7 +406,11 @@ function MedicineCard({ data, onLongPress, colors, isPrimary = false }) {
         }}
       >
         <View style={styles.resultHeader}>
-          <Text style={[styles.resultTitle, { color: colors.text }]} numberOfLines={2} ellipsizeMode="tail">
+          <Text
+            style={[styles.resultTitle, { color: colors.text }]}
+            numberOfLines={2}
+            ellipsizeMode="tail"
+          >
             {data.name || "N/A"}
           </Text>
           <Text style={[styles.price, { color: colors.price }]}>
@@ -351,11 +418,19 @@ function MedicineCard({ data, onLongPress, colors, isPrimary = false }) {
           </Text>
         </View>
         <Text numberOfLines={1} style={{ marginTop: 4 }}>
-          Manufacturer: {data.manufacturer_name}
+          <Text style={{ fontWeight: "700", color: colors.label }}>
+            Manufacturer:
+          </Text>
+          <Text style={{ color: textColor }}>{data.manufacturer_name}</Text>
         </Text>
         <Text numberOfLines={2} style={{ marginTop: 2 }}>
-          Components: {data.short_composition1}{" "}
-          {data.short_composition2 ? `, ${data.short_composition2}` : ""}
+          <Text style={{ fontWeight: "700", color: colors.label }}>
+            Components:
+          </Text>
+          <Text style={{ color: textColor }}>
+            {data.short_composition1}{" "}
+            {data.short_composition2 ? `, ${data.short_composition2}` : ""}
+          </Text>
         </Text>
         <Text style={{ fontSize: 12, marginTop: 4, color: colors.label }}>
           (Long press for details)
@@ -365,18 +440,21 @@ function MedicineCard({ data, onLongPress, colors, isPrimary = false }) {
   );
 }
 
-function Detail({ label, value }) {
+function Detail({ label, value, colors }) {
+  const colorScheme = useColorScheme();
+  const textColor = colorScheme === "dark" ? "#c9c9c9ff" : "#7e7e7eff";
+
   if (!value) return null;
   return (
     <Text style={{ marginBottom: 6 }}>
-      <Text style={{ fontWeight: "700" }}>{label}: </Text>
-      <Text>{value}</Text>
+      <Text style={{ fontWeight: "700", color: colors.label }}>{label}: </Text>
+      <Text style={{ color: textColor }}>{value}</Text>
     </Text>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, padding: 16 },
+  container: { flexGrow: 1, padding: 10 },
   title: { fontSize: 22, fontWeight: "700", marginBottom: 12 },
   label: { fontSize: 16, fontWeight: "500", marginBottom: 8 },
   input: {
