@@ -1,4 +1,3 @@
-// src/screens/Maps.jsx
 import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
@@ -20,9 +19,21 @@ const DARK_MAP_STYLE = [
   { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
   { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
   { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
-  { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
-  { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
-  { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] },
+  {
+    featureType: "poi",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#d59563" }],
+  },
+  {
+    featureType: "road",
+    elementType: "geometry",
+    stylers: [{ color: "#38414e" }],
+  },
+  {
+    featureType: "water",
+    elementType: "geometry",
+    stylers: [{ color: "#17263c" }],
+  },
 ];
 
 export default function Maps() {
@@ -34,28 +45,25 @@ export default function Maps() {
   const [loading, setLoading] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState(null);
 
-  const radius = 5000; // 5 km
-  const MAX_RESULTS = 100;
+  const MAX_RESULTS = 20;
+  const RADIUS = 2500; // 5 km
 
   const buildOverpassQuery = (lat, lon, r) => {
     const clauses = [
       'node["amenity"="pharmacy"]',
-      'way["amenity"="pharmacy"]',
       'node["shop"="chemist"]',
-      'way["shop"="chemist"]',
       'node["shop"="drugstore"]',
-      'way["shop"="drugstore"]',
       'node["healthcare"="pharmacy"]',
-      'way["healthcare"="pharmacy"]',
     ];
-    return `[out:json][timeout:25];
+
+    return `[out:json][timeout:20];
 (
   ${clauses.map((c) => `${c}(around:${r},${lat},${lon});`).join("\n  ")}
 );
-out center ${MAX_RESULTS};`;
+out center qt 5;`;
   };
 
-  const fetchWithTimeout = async (url, options = {}, timeout = 10000) => {
+  const fetchWithTimeout = async (url, options = {}, timeout = 5000) => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeout);
     try {
@@ -68,9 +76,10 @@ out center ${MAX_RESULTS};`;
     }
   };
 
-  const fetchPlaces = useCallback(async (lat, lon, r) => {
+  const fetchPlaces = useCallback(async (lat, lon) => {
+    setLoading(true);
     try {
-      const query = buildOverpassQuery(lat, lon, r);
+      const query = buildOverpassQuery(lat, lon, RADIUS);
       const res = await fetchWithTimeout(
         "https://overpass-api.de/api/interpreter",
         {
@@ -84,23 +93,14 @@ out center ${MAX_RESULTS};`;
       if (!res.ok) throw new Error(`Overpass API error: ${res.status}`);
       const json = await res.json();
 
-      const elements = (json.elements || [])
-        .slice(0, MAX_RESULTS)
-        .map((el) => {
-          if (el.type === "node")
-            return { id: el.id, lat: el.lat, lon: el.lon, tags: el.tags || {} };
-          if (el.type === "way" && el.center)
-            return {
-              id: el.id,
-              lat: el.center.lat,
-              lon: el.center.lon,
-              tags: el.tags || {},
-            };
-          return null;
-        })
-        .filter(Boolean);
+      const foundPlaces = (json.elements || []).map((el) => ({
+        id: el.id,
+        lat: el.lat,
+        lon: el.lon,
+        tags: el.tags || {},
+      }));
 
-      setPlaces(elements);
+      setPlaces(foundPlaces.slice(0, MAX_RESULTS));
     } catch (err) {
       console.error("Fetch places error:", err);
       Alert.alert(
@@ -115,7 +115,6 @@ out center ${MAX_RESULTS};`;
   }, []);
 
   const getLocationAndFetch = useCallback(async () => {
-    setLoading(true);
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
@@ -123,15 +122,14 @@ out center ${MAX_RESULTS};`;
           "Permission Required",
           "Location permission is required to find nearby medical shops."
         );
-        setLoading(false);
         return;
       }
 
       const loc = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
       });
-
       const { latitude, longitude } = loc.coords;
+
       setRegion({
         latitude,
         longitude,
@@ -139,11 +137,10 @@ out center ${MAX_RESULTS};`;
         longitudeDelta: 0.05,
       });
 
-      await fetchPlaces(latitude, longitude, radius);
+      await fetchPlaces(latitude, longitude);
     } catch (err) {
       console.error("Location error:", err);
       Alert.alert("Error", "Could not get location. Please try again.");
-      setLoading(false);
     }
   }, [fetchPlaces]);
 
@@ -168,17 +165,41 @@ out center ${MAX_RESULTS};`;
     <View style={[styles.container, isDark ? styles.darkBg : styles.lightBg]}>
       <StatusBar style={isDark ? "light" : "dark"} />
 
-      {/* Header with Refresh Button */}
+      {/* Header */}
       <View style={styles.headerRow}>
-        <Text style={[styles.header, isDark ? styles.headerDark : styles.headerLight]}>
+        <Text
+          style={[
+            styles.header,
+            isDark ? styles.headerDark : styles.headerLight,
+          ]}
+        >
           Nearest Medical Shops
         </Text>
-        <TouchableOpacity onPress={getLocationAndFetch} style={styles.refreshBtn}>
-          <Ionicons name="refresh-circle" size={30} color={isDark ? "#fff" : "#0EA5A4"} />
+        <TouchableOpacity
+          onPress={getLocationAndFetch}
+          style={[
+            styles.refreshBtn,
+            loading && styles.refreshBtnLoading, // add dynamic style
+          ]}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator
+              size="small"
+              color={isDark ? "#fff" : "#0EA5A4"}
+              style={{ marginRight: 0 }}
+            />
+          ) : (
+            <Ionicons
+              name="refresh-circle"
+              size={30}
+              color={isDark ? "#fff" : "#0EA5A4"}
+            />
+          )}
         </TouchableOpacity>
       </View>
 
-      {/* Map Section */}
+      {/* Map */}
       {region && (
         <View style={styles.innerContainer}>
           <MapView
@@ -187,11 +208,13 @@ out center ${MAX_RESULTS};`;
             showsUserLocation
             showsMyLocationButton
             customMapStyle={isDark ? DARK_MAP_STYLE : []}
-            provider={Platform.OS === "android" ? MapView.PROVIDER_GOOGLE : undefined}
+            provider={
+              Platform.OS === "android" ? MapView.PROVIDER_GOOGLE : undefined
+            }
           >
-            {places.map((p) => (
+            {places.map((p, index) => (
               <Marker
-                key={p.id}
+                key={`${p.id}_${index}`}
                 coordinate={{ latitude: p.lat, longitude: p.lon }}
                 title={p.tags.name || "Medicine Shop"}
                 description={
@@ -218,7 +241,7 @@ out center ${MAX_RESULTS};`;
         </View>
       )}
 
-      {/* Single unified loader */}
+      {/* Loader */}
       {loading && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color={isDark ? "#fff" : "#007AFF"} />
@@ -278,5 +301,11 @@ const styles = StyleSheet.create({
   lightBg: { backgroundColor: "#F0FDF4" },
   headerLight: { color: "#1F2937" },
   headerDark: { color: "#F3F4F6" },
-  refreshBtn: { marginRight: 4 },
+  refreshBtn: {
+    marginRight: 4,
+  },
+
+  refreshBtnLoading: {
+    opacity: 0.6, // visually indicate disabled
+  },
 });
