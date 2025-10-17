@@ -18,7 +18,6 @@ import { BlurView } from "expo-blur";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Profile_Card from "@/components/profile_card";
 import { useRouter } from "expo-router";
-import { auth } from "../../firebase"; // adjust path if necessary
 
 export default function Profile({ name }) {
   const colorScheme = useColorScheme();
@@ -40,12 +39,12 @@ export default function Profile({ name }) {
   const genderOptions = ["male", "female", "prefer not to say"];
 
   // Firebase auth state
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      setCurrentUser(user);
-    });
-    return unsubscribe;
-  }, []);
+  // useEffect(() => {
+  //   const unsubscribe = auth.onAuthStateChanged((user) => {
+  //     setCurrentUser(user);
+  //   });
+  //   return unsubscribe;
+  // }, []);
 
   // Load stored profile
   useEffect(() => {
@@ -71,17 +70,17 @@ export default function Profile({ name }) {
     }
   };
 
-  const handleChange = (key, value) =>
-    setUser((prev) => ({ ...prev, [key]: value }));
+  // const handleChange = (key, value) =>
+  //   setUser((prev) => ({ ...prev, [key]: value }));
 
-  const handleLogout = async () => {
-    try {
-      await auth.signOut();
-      router.replace("/(auth)");
-    } catch (_error) {
-      Alert.alert("Error", "Failed to logout. Please try again.");
-    }
-  };
+  // const handleLogout = async () => {
+  //   try {
+  //     await auth.signOut();
+  //     router.replace("/(auth)");
+  //   } catch (_error) {
+  //     Alert.alert("Error", "Failed to logout. Please try again.");
+  //   }
+  // };
 
   return (
     <KeyboardAvoidingView
