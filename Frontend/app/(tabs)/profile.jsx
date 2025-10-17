@@ -118,7 +118,7 @@ export default function Profile({ name }) {
             </Text>
             <Pressable
               style={[dynamicStyles.button, dynamicStyles.loginButton]}
-              onPress={() => router.push("/(auth)")}
+              onPress={() => router.push("/sign-in")}
             >
               <Text style={dynamicStyles.buttonText}>Login</Text>
             </Pressable>
