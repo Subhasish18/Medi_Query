@@ -14,6 +14,7 @@ import MapView, { Marker } from "react-native-maps";
 import * as Location from "expo-location";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
+import config from "../../config"; // contains API_BASE = "https://your-api-url.com"
 
 const DARK_MAP_STYLE = [
   { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
@@ -45,77 +46,58 @@ export default function Maps() {
   const [loading, setLoading] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState(null);
 
-  const MAX_RESULTS = 20;
-  const RADIUS = 2500; // 5 km
+  const API_URL = `${config.API_BASE}/get_medical_shops`;
 
-  const buildOverpassQuery = (lat, lon, r) => {
-    const clauses = [
-      'node["amenity"="pharmacy"]',
-      'node["shop"="chemist"]',
-      'node["shop"="drugstore"]',
-      'node["healthcare"="pharmacy"]',
-    ];
-
-    return `[out:json][timeout:20];
-(
-  ${clauses.map((c) => `${c}(around:${r},${lat},${lon});`).join("\n  ")}
-);
-out center qt 5;`;
-  };
-
-  const fetchWithTimeout = async (url, options = {}, timeout = 5000) => {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeout);
-    try {
-      const res = await fetch(url, { ...options, signal: controller.signal });
-      clearTimeout(timer);
-      return res;
-    } catch (err) {
-      clearTimeout(timer);
-      throw err;
-    }
-  };
-
-  const fetchPlaces = useCallback(async (lat, lon) => {
+  const fetchPrivateAPI = useCallback(async (lat, lon) => {
     setLoading(true);
     try {
-      const query = buildOverpassQuery(lat, lon, RADIUS);
-      const res = await fetchWithTimeout(
-        "https://overpass-api.de/api/interpreter",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: `data=${encodeURIComponent(query)}`,
-        },
-        15000
-      );
+      console.log("📍 Sending coordinates to API:", { lat, lon });
 
-      if (!res.ok) throw new Error(`Overpass API error: ${res.status}`);
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          latitude: lat,
+          longitude: lon,
+        }),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        console.error("❌ API error response:", text);
+        throw new Error(`API responded with status ${res.status}`);
+      }
+
       const json = await res.json();
+      console.log("✅ Fetched nearby shops:", json);
 
-      const foundPlaces = (json.elements || []).map((el) => ({
-        id: el.id,
-        lat: el.lat,
-        lon: el.lon,
-        tags: el.tags || {},
+      // Expected response: [{ id, lat, lon, name, address }]
+      const fetchedPlaces = (json || []).map((p, idx) => ({
+        id: p.id || idx,
+        lat: p.lat,
+        lon: p.lon,
+        tags: {
+          name: p.name || "Medical Shop",
+          address: p.address || "Address not available",
+        },
       }));
 
-      setPlaces(foundPlaces.slice(0, MAX_RESULTS));
+      setPlaces(fetchedPlaces);
     } catch (err) {
-      console.error("Fetch places error:", err);
+      console.error("Private API fetch error (details):", err);
       Alert.alert(
-        "Error",
-        err.name === "AbortError"
-          ? "Request timed out. Please try again."
-          : "Unable to fetch nearby medicine shops."
+        "Server Error",
+        "Could not fetch nearby medical shops. Please check your connection or try again."
       );
     } finally {
       setLoading(false);
     }
   }, []);
 
+  // --- Get Location and Fetch Data ---
   const getLocationAndFetch = useCallback(async () => {
     try {
+      setPlaces([]); // Clear old markers before new call
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
         Alert.alert(
@@ -137,12 +119,12 @@ out center qt 5;`;
         longitudeDelta: 0.05,
       });
 
-      await fetchPlaces(latitude, longitude);
+      await fetchPrivateAPI(latitude, longitude);
     } catch (err) {
       console.error("Location error:", err);
       Alert.alert("Error", "Could not get location. Please try again.");
     }
-  }, [fetchPlaces]);
+  }, [fetchPrivateAPI]);
 
   useEffect(() => {
     getLocationAndFetch();
@@ -177,10 +159,7 @@ out center qt 5;`;
         </Text>
         <TouchableOpacity
           onPress={getLocationAndFetch}
-          style={[
-            styles.refreshBtn,
-            loading && styles.refreshBtnLoading, // add dynamic style
-          ]}
+          style={[styles.refreshBtn, loading && styles.refreshBtnLoading]}
           disabled={loading}
         >
           {loading ? (
@@ -217,11 +196,7 @@ out center qt 5;`;
                 key={`${p.id}_${index}`}
                 coordinate={{ latitude: p.lat, longitude: p.lon }}
                 title={p.tags.name || "Medicine Shop"}
-                description={
-                  p.tags["addr:street"] ||
-                  p.tags["operator"] ||
-                  "Pharmacy / Chemist nearby"
-                }
+                description={p.tags.address || "Pharmacy nearby"}
                 onPress={() => setSelectedPlace(p)}
               >
                 <View style={styles.marker}>
@@ -241,12 +216,12 @@ out center qt 5;`;
         </View>
       )}
 
-      {/* Loader */}
+      {/* Loader Overlay */}
       {loading && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color={isDark ? "#fff" : "#007AFF"} />
           <Text style={{ marginTop: 8, color: isDark ? "#fff" : "#333" }}>
-            Loading nearby medicine shops...
+            Loading nearby medical shops...
           </Text>
         </View>
       )}
@@ -301,11 +276,6 @@ const styles = StyleSheet.create({
   lightBg: { backgroundColor: "#F0FDF4" },
   headerLight: { color: "#1F2937" },
   headerDark: { color: "#F3F4F6" },
-  refreshBtn: {
-    marginRight: 4,
-  },
-
-  refreshBtnLoading: {
-    opacity: 0.6, // visually indicate disabled
-  },
+  refreshBtn: { marginRight: 4 },
+  refreshBtnLoading: { opacity: 0.6 },
 });

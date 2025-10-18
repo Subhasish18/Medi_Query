@@ -1,5 +1,5 @@
 // config.js
-// Handles API_BASE for dev (LAN IP) and production
+// Handles API_BASE for dev (LAN IP) "http://10.123.255.102:5000" and production
 
 const ENV = {
   dev: {
